@@ -1,7 +1,8 @@
+"""FastAPI application entry point for EventFlow"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1.router import api_router_v1
+from app.api.v1.router import api_router
 
 app = FastAPI(
     title="EventFlow API",
@@ -19,9 +20,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router_v1, prefix="/api/v1")
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "EventFlow API"}
+
+
+@app.get("/")
+def root():
+    return {"message": "EventFlow API", "version": "1.0.0"}

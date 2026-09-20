@@ -1,3 +1,4 @@
+"""Database connection and session management for EventFlow"""
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
