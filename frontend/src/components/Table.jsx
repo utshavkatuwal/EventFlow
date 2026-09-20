@@ -1,5 +1,5 @@
 import React from 'react';
-import './Table.css';
+import '../styles/Table.css';
 
 export default function Table({ columns, data, keyField = 'id', onRowClick, emptyMessage = 'No data available' }) {
   if (!data || data.length === 0) {

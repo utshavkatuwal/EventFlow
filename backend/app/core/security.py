@@ -1,11 +1,18 @@
 import os
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from fastapi import HTTPException, Security, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 from app.core.config import settings
+from app.database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -38,3 +45,34 @@ def verify_token(token: str, token_type: str = "access") -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+def generate_qr_token() -> str:
+    return uuid.uuid4().hex
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+    db: Session = Depends(get_db),
+):
+    if not credentials:
+        return None
+    token = credentials.credentials
+    payload = verify_token(token, "access")
+    if not payload:
+        return None
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    from app.models.user import User as UserModel
+    return db.query(UserModel).filter(UserModel.id == int(user_id)).first()
+
+
+def get_current_active_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
+    db: Session = Depends(get_db),
+):
+    user = get_current_user(credentials, db)
+    if not user or not user.is_active:
+        return None
+    return user

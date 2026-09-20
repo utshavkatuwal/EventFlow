@@ -1,5 +1,4 @@
-"""FastAPI application entry point for EventFlow"""
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -31,3 +30,8 @@ def health_check():
 @app.get("/")
 def root():
     return {"message": "EventFlow API", "version": "1.0.0"}
+
+
+@app.get("/debug/headers")
+def debug_headers():
+    return {"message": "debug endpoint removed"}

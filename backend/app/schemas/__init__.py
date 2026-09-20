@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 from datetime import datetime
-from app.models.user import EventStatus, EventCategory
+from app.models.event import EventStatus, EventCategory
 
 
 # Common

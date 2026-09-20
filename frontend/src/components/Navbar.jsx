@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import './Navbar.css';
+import '../styles/Navbar.css';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -3,32 +3,14 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.core.security import verify_token
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.models.organizer import OrganizerProfile
+from app.core.security import get_current_active_user
 
 api_router = APIRouter(prefix="/users/me", tags=["User"])
 
 
-def get_current_user(token: Optional[str] = None, db: Session = Depends(get_db)):
-    if not token:
-        return None
-    payload = verify_token(token, "access")
-    if not payload:
-        return None
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-    return db.query(UserModel).filter(UserModel.id == int(user_id)).first()
-
-
 @api_router.get("", response_model=dict)
-def get_me(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    from app.models.other import OrganizerProfile
+def get_me(user: UserModel = Depends(get_current_active_user), db: Session = Depends(get_db)):
     org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
     
     return {
@@ -52,11 +34,7 @@ def get_me(token: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @api_router.patch("", response_model=dict)
-def update_me(user_data: dict, token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
+def update_me(user_data: dict, user: UserModel = Depends(get_current_active_user), db: Session = Depends(get_db)):
     for field in ["first_name", "last_name", "phone", "avatar_url"]:
         if field in user_data:
             setattr(user, field, user_data[field])

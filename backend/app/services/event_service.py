@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import func, and_
 from app.database import Base, engine
-from app.models.event import Event, EventCategory, EventImage, TicketType
+from app.models.event import Event, EventCategory
+from app.models.event_image import EventImage
+from app.models.ticket import TicketType
 from app.models.user import User
 from app.models.organizer import OrganizerProfile
 from app.models.ticket import Registration, Ticket, TicketScan
@@ -33,6 +35,7 @@ def seed_database():
             _seed_users(db)
             _seed_categories(db)
             _seed_events(db)
+            db.commit()
         print("Database seeded successfully.")
     except Exception as e:
         db.rollback()
@@ -160,7 +163,7 @@ def _seed_events(db):
         ),
         Event(
             organizer_id=organizer.id,
-            category_id=cat_map.get="Music", categories[3]).id,
+            category_id=cat_map.get("Music", categories[3]).id,
             title="Nepal Music Festival",
             slug="nepal-music-festival",
             short_description="A celebration of Nepali music and talent",

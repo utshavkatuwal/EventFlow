@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.models.event import Event
-from app.models.event_category import EventCategory
+from app.models.event import Event, EventCategory
 from app.models.ticket import TicketType
-from app.models.other import EventReview, Favorite, Notification, OrganizerProfile
+from app.models.other import EventReview, Favorite, Notification
+from app.models.organizer import OrganizerProfile
 from app.schemas import CategoryCreate, CategoryResponse, ReviewCreate
 from app.core.security import verify_token
 from app.core.config import settings

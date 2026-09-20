@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../context/ApiContext';
-import './Button.css';
+import '../styles/Button.css';
 
 export function Button({ variant = 'primary', size = 'md', children, onClick, disabled, type = 'button' }) {
   return (
