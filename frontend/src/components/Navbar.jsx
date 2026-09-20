@@ -1,18 +1,31 @@
-import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useNav } from '../context/NavContext';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import './Navbar.css';
 
-const NavLinks = [
-  { path: '/', label: 'Home' },
-  { path: '/events', label: 'Events' },
-];
-
 export default function Navbar() {
-  const { user, logout, isAuthenticated } = useAuth();
-  const { mobileOpen, setMobileOpen } = useNav();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch { }
+  }, [location.pathname]);
+
+  const navLinks = [
+    { path: '/', label: 'Home' },
+    { path: '/events', label: 'Events' },
+  ];
+
+  if (user) {
+    const dashboardPath = user.role === 'organizer' || user.role === 'admin'
+      ? '/organizer/dashboard'
+      : '/user/dashboard';
+    navLinks.push({ path: dashboardPath, label: 'Dashboard' });
+  }
 
   return (
     <header className="navbar">
@@ -22,7 +35,7 @@ export default function Navbar() {
         </Link>
 
         <nav className={`navbar-nav ${mobileOpen ? 'open' : ''}`} aria-label="Main navigation">
-          {NavLinks.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -32,33 +45,20 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          {isAuthenticated && (
-            <Link
-              to={user?.role === 'organizer' ? '/organizer/dashboard' : user?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'}
-              className={location.pathname.includes('dashboard') ? 'active' : ''}
-              onClick={() => setMobileOpen(false)}
-            >
-              Dashboard
-            </Link>
-          )}
         </nav>
 
         <div className="navbar-actions">
-          {isAuthenticated ? (
+          {user ? (
             <>
-              <span className="navbar-user">{user?.first_name || user?.username}</span>
-              <button onClick={logout} className="btn btn-secondary btn-sm">
+              <span className="navbar-user">{user.first_name || user.username}</span>
+              <button onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('access_token'); window.location.href = '/'; }} className="btn btn-secondary btn-sm">
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn btn-secondary btn-sm">
-                Log In
-              </Link>
-              <Link to="/register" className="btn btn-primary btn-sm">
-                Sign Up
-              </Link>
+              <Link to="/login" className="btn btn-secondary btn-sm">Log In</Link>
+              <Link to="/register" className="btn btn-primary btn-sm">Sign Up</Link>
             </>
           )}
           <button
