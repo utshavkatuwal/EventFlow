@@ -1,4 +1,4 @@
-from typing import Optional
+"""EventFlow Settings Configuration"""
 from pydantic_settings import BaseSettings
 
 

@@ -1,0 +1,2 @@
+# Tests
+# pytest tests/ -v

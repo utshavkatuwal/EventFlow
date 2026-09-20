@@ -1,0 +1,22 @@
+.breadcrumbs {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.breadcrumbs a {
+  color: var(--color-text-secondary);
+}
+
+.breadcrumbs a:hover {
+  color: var(--color-text);
+}
+
+.breadcrumb-separator {
+  margin: 0 var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+.breadcrumb-current {
+  color: var(--color-text);
+}
