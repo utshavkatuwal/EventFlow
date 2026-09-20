@@ -5,6 +5,7 @@ import { apiFetch } from '../services/api';
 import Navbar from './Navbar';
 import Loading from '../components/Loading';
 import QRCode from 'qrcode.react';
+import Badge from '../components/Badge';
 import './EventDetail.css';
 
 export default function EventDetailPage() {
@@ -15,9 +16,8 @@ export default function EventDetailPage() {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [registering, setRegistering] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -27,7 +27,7 @@ export default function EventDetailPage() {
           apiFetch(`/events/${id}/tickets`).catch(() => []),
         ]);
         if (evData) {
-          setEvent(evData);
+          setEvent(evData?.data || evData);
           if (ttData && ttData.items) setTicketTypes(ttData.items);
           else if (ttData && Array.isArray(ttData)) setTicketTypes(ttData);
         } else {
@@ -62,15 +62,15 @@ export default function EventDetailPage() {
     }
   };
 
-  if (loading) return <Loading />;
-  if (error) return <p>{error}</p>;
-  if (!event) return <p>Event not found.</p>;
-
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
+
+  if (loading) return <Loading />;
+  if (error) return <p className="error">{error}</p>;
+  if (!event) return <p>Event not found.</p>;
 
   return (
     <>
@@ -85,39 +85,65 @@ export default function EventDetailPage() {
             {event.cover_image_url ? (
               <img src={event.cover_image_url} alt={event.title} />
             ) : (
-              <div className="event-hero-placeholder">{event.title.charAt(0)}</div>
+              <div className="event-hero-placeholder">{event.title?.charAt(0) || '?'}</div>
             )}
             <div className="event-detail-header">
-              <span className="event-detail-category">{event.category_name || 'Event'}</span>
+              <Badge variant="primary">{event.category_name || 'Event'}</Badge>
               <h1>{event.title}</h1>
               <div className="event-detail-meta">
-                <span>{formatDate(event.start_date)}</span>
-                <span>{event.venue || event.address || event.city || ''}</span>
-                <span>{event.organizer_name || 'Unknown'}</span>
+                <span><strong>Date:</strong> {formatDate(event.start_date)}</span>
+                <span><strong>Location:</strong> {event.venue || event.address || event.city || '-'}</span>
+                <span><strong>Organizer:</strong> {event.organizer_name || 'Unknown'}</span>
               </div>
             </div>
           </div>
 
           <div className="event-detail-body">
             <div className="event-detail-main">
-              <div className="section">
+              <section className="section">
                 <h2>About</h2>
                 <p>{event.full_description || event.short_description || 'No description available.'}</p>
-              </div>
+              </section>
+
+              <section className="section">
+                <h2>Details</h2>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <strong>Date & Time</strong>
+                    <span>{formatDate(event.start_date)}</span>
+                  </div>
+                  <div className="detail-item">
+                    <strong>Venue</strong>
+                    <span>{event.venue || event.address || event.city || '-'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <strong>Capacity</strong>
+                    <span>{event.total_registrations || 0} / {event.max_capacity}</span>
+                  </div>
+                  <div className="detail-item">
+                    <strong>Price</strong>
+                    <span>{event.price_min > 0 ? `Rs. ${event.price_min}` : 'Free'}</span>
+                  </div>
+                </div>
+              </section>
             </div>
 
             <aside className="event-detail-sidebar">
               <div className="sidebar-card">
-                <h3>Tickets</h3>
+                <h3>Available Tickets</h3>
                 {ticketTypes.length > 0 ? (
                   ticketTypes.map((tt) => (
-                    <div key={tt.id} className="ticket-option" onClick={() => setSelectedTicket(tt)}>
+                    <div
+                      key={tt.id}
+                      className={`ticket-option ${selectedTicket?.id === tt.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedTicket(tt)}
+                    >
                       <div className="ticket-info">
                         <span className="ticket-name">{tt.name}</span>
                         <span className="ticket-price">{tt.price > 0 ? `Rs. ${tt.price.toLocaleString()}` : 'Free'}</span>
                       </div>
                       <span className="ticket-avail">
-                        {tt.capacity - tt.sold_count} available
+                        {tt.capacity - tt.sold_count} of {tt.capacity} available
                       </span>
                     </div>
                   ))
@@ -135,13 +161,14 @@ export default function EventDetailPage() {
                 )}
               </div>
 
-              {user && (
-                <div className="sidebar-card">
-                  <button className="btn btn-secondary btn-lg" onClick={() => setSaved(!saved)}>
-                    {saved ? 'Saved' : 'Save Event'}
-                  </button>
-                </div>
-              )}
+              <div className="sidebar-card">
+                <button
+                  className="btn btn-secondary btn-lg"
+                  onClick={() => { /* toggle favorite */ }}
+                >
+                  Save Event
+                </button>
+              </div>
             </aside>
           </div>
         </div>
