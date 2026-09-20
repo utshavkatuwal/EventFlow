@@ -1,5 +1,5 @@
 import React from 'react';
-import './EventCard.css';
+import '../styles/Card.css';
 import { Link } from 'react-router-dom';
 
 export default function SimpleEventCard({ event }) {

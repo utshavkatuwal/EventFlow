@@ -5,7 +5,8 @@ from app.database import get_db
 from app.models.user import User as UserModel, UserRole
 from app.models.event import Event, EventCategory, EventStatus
 from app.models.ticket import Registration, Ticket, TicketType
-from app.models.other import EventReview, Favorite, Notification, OrganizerProfile
+from app.models.other import EventReview, Favorite, Notification
+from app.models.organizer import OrganizerProfile
 from app.services.public_service import get_event_stats
 from app.services.auth_service import register_user, check_in_ticket
 from app.services.analytics_service import get_admin_stats, get_dashboard_stats_organizer
@@ -87,7 +88,7 @@ def list_events(
     sort: str = "start_date",
     db: Session = Depends(get_db),
 ):
-    query = db.query(Event).join(UserModel).outerjoin(EventCategory)
+    query = db.query(Event).join(OrganizerProfile, Event.organizer_id == OrganizerProfile.id).outerjoin(EventCategory)
     
     if category_id:
         query = query.filter(Event.category_id == category_id)

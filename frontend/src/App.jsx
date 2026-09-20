@@ -1,49 +1,53 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import RequireAuth from '../components/RequireAuth';
-import ProtectedRoute from '../components/ProtectedRoute';
-import Loading from '../components/Loading';
+import { useAuth } from './context/AuthContext.jsx';
+import { ApiProvider } from './context/ApiContext.jsx';
+import { NavProvider } from './context/NavContext.jsx';
+import RequireAuth from './components/RequireAuth.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import Loading from './components/Loading.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // Lazy loaded pages
-const HomePage = React.lazy(() => import('../pages/HomePage'));
-const EventsPage = React.lazy(() => import('../pages/EventsPage'));
-const EventDetailPage = React.lazy(() => import('../pages/EventDetailPage'));
-const LoginPage = React.lazy(() => import('../pages/LoginPage'));
-const RegisterPage = React.lazy(() => import('../pages/RegisterPage'));
-const UserDashboardPage = React.lazy(() => import('../pages/UserDashboardPage'));
-const MyTicketsPage = React.lazy(() => import('../pages/MyTicketsPage'));
-const SavedEventsPage = React.lazy(() => import('../pages/SavedEventsPage'));
-const ReviewsPage = React.lazy(() => import('../pages/ReviewsPage'));
-const UpcomingEventsPage = React.lazy(() => import('../pages/UpcomingEventsPage'));
-const PastEventsPage = React.lazy(() => import('../pages/PastEventsPage'));
-const ProfilePage = React.lazy(() => import('../pages/ProfilePage'));
-const ProfileEditPage = React.lazy(() => import('../pages/ProfileEditPage'));
-const TicketDetailPage = React.lazy(() => import('../pages/TicketDetailPage'));
-const CreateEventPage = React.lazy(() => import('../pages/CreateEventPage'));
-const NotificationsPage = React.lazy(() => import('../pages/NotificationsPage'));
-const CheckInPage = React.lazy(() => import('../pages/CheckInPage'));
-const EventSearchPage = React.lazy(() => import('../pages/EventSearchPage'));
-const CategoryEventsPage = React.lazy(() => import('../pages/CategoryEventsPage'));
-const OrganizerDashboardPage = React.lazy(() => import('../pages/OrganizerDashboardPage'));
-const OrganizerMyEventsPage = React.lazy(() => import('../pages/OrganizerMyEventsPage'));
-const OrganizerRegistrationsPage = React.lazy(() => import('../pages/OrganizerRegistrationsPage'));
-const OrganizerAnalyticsPage = React.lazy(() => import('../pages/OrganizerAnalyticsPage'));
-const OrganizerProfilePage = React.lazy(() => import('../pages/OrganizerProfilePage'));
-const AdminDashboardPage = React.lazy(() => import('../pages/AdminDashboardPage'));
-const AdminEventsPage = React.lazy(() => import('../pages/AdminEventsPage'));
-const AdminUsersPage = React.lazy(() => import('../pages/AdminUsersPage'));
-const AdminOrganizersPage = React.lazy(() => import('../pages/AdminOrganizersPage'));
-const AdminReportsPage = React.lazy(() => import('../pages/AdminReportsPage'));
-const AdminAuditLogsPage = React.lazy(() => import('../pages/AdminAuditLogsPage'));
-const AdminCategoriesPage = React.lazy(() => import('../pages/AdminCategoriesPage'));
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+const EventsPage = React.lazy(() => import('./pages/EventsPage'));
+const EventDetailPage = React.lazy(() => import('./pages/EventDetailPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const UserDashboardPage = React.lazy(() => import('./pages/UserDashboardPage'));
+const MyTicketsPage = React.lazy(() => import('./pages/MyTicketsPage'));
+const SavedEventsPage = React.lazy(() => import('./pages/SavedEventsPage'));
+const ReviewsPage = React.lazy(() => import('./pages/ReviewsPage'));
+const UpcomingEventsPage = React.lazy(() => import('./pages/UpcomingEventsPage'));
+const PastEventsPage = React.lazy(() => import('./pages/PastEventsPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const ProfileEditPage = React.lazy(() => import('./pages/ProfileEditPage'));
+const TicketDetailPage = React.lazy(() => import('./pages/TicketDetailPage'));
+const CreateEventPage = React.lazy(() => import('./pages/CreateEventPage'));
+const NotificationsPage = React.lazy(() => import('./pages/NotificationsPage'));
+const CheckInPage = React.lazy(() => import('./pages/CheckInPage'));
+const EventSearchPage = React.lazy(() => import('./pages/EventSearchPage'));
+const CategoryEventsPage = React.lazy(() => import('./pages/CategoryEventsPage'));
+const OrganizerDashboardPage = React.lazy(() => import('./pages/OrganizerDashboardPage'));
+const OrganizerMyEventsPage = React.lazy(() => import('./pages/OrganizerMyEventsPage'));
+const OrganizerRegistrationsPage = React.lazy(() => import('./pages/OrganizerRegistrationsPage'));
+const OrganizerAnalyticsPage = React.lazy(() => import('./pages/OrganizerAnalyticsPage'));
+const OrganizerProfilePage = React.lazy(() => import('./pages/OrganizerProfilePage'));
+const AdminDashboardPage = React.lazy(() => import('./pages/AdminDashboardPage'));
+const AdminEventsPage = React.lazy(() => import('./pages/AdminEventsPage'));
+const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage'));
+const AdminOrganizersPage = React.lazy(() => import('./pages/AdminOrganizersPage'));
+const AdminReportsPage = React.lazy(() => import('./pages/AdminReportsPage'));
+const AdminAuditLogsPage = React.lazy(() => import('./pages/AdminAuditLogsPage'));
+const AdminCategoriesPage = React.lazy(() => import('./pages/AdminCategoriesPage'));
 
 function AppRoutes() {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <React.Suspense fallback={<Loading />}>
-      <Routes>
+    <ErrorBoundary>
+      <React.Suspense fallback={<Loading />}>
+        <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:id" element={<EventDetailPage />} />
@@ -292,7 +296,8 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </React.Suspense>
-  );
+  </ErrorBoundary>
+);
 }
 
 export default function App() {

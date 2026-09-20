@@ -1,5 +1,5 @@
 import React from 'react';
-import './Input.css';
+import '../styles/Input.css';
 
 export default function Input({ label, error, hint, id, ...props }) {
   return (

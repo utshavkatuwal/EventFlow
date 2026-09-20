@@ -1,5 +1,5 @@
 import React from 'react';
-import './Avatar.css';
+import '../styles/Avatar.css';
 
 export default function Avatar({ name, size = 'md', className = '' }) {
   const initials = name

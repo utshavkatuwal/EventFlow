@@ -1,5 +1,4 @@
 # Database
--e .env
 
 # API
 fastapi==0.111.0

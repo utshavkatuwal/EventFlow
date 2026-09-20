@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from './Navbar';
-import './Footer.css';
+import '../styles/Footer.css';
 
 export default function Footer() {
   const location = useLocation();

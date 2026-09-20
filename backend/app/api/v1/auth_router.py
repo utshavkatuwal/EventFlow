@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.models.other import Favorite as FavoriteModel, OrganizerProfile, AuditLog
+from app.models.other import Favorite as FavoriteModel, AuditLog
+from app.models.organizer import OrganizerProfile
 from app.core.security import verify_token, hash_password
 from app.schemas import ResponseModel
 import sys, os

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.models.other import OrganizerProfile
+from app.models.organizer import OrganizerProfile
 from app.models.event import Event
 from app.core.security import verify_token
 import uuid

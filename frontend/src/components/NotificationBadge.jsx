@@ -1,5 +1,5 @@
 import React from 'react';
-import './NotificationBadge.css';
+import '../styles/NotificationBadge.css';
 
 export default function NotificationBadge({ count }) {
   if (!count || count === 0) return null;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../services/api';
-import './Loading.css';
+import '../styles/Loading.css';
 
 export default function Loading({ text = 'Loading...' }) {
   return (
