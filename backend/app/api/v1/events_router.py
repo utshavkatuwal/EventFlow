@@ -524,3 +524,37 @@ def user_past(token: Optional[str] = None, db: Session = Depends(get_db)):
                 "price_min": ev.price_min, "organizer_name": None, "status": ev.status,
             })
     return {"success": True, "items": result}
+
+
+# Event Creation (Organizer)
+@api_router.post("/events", tags=["Events"])
+def create_event(event_data: dict, token: Optional[str] = None, db: Session = Depends(get_db)):
+    user = get_current_active_user(token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
+    if not org:
+        raise HTTPException(status_code=403, detail="Organizer profile required")
+    
+    event = Event(
+        organizer_id=org.id,
+        category_id=event_data.get("category_id"),
+        title=event_data.get("title"),
+        slug=event_data.get("title", "").lower().replace(" ", "-") + "-" + str(uuid.uuid4().hex[:8]),
+        short_description=event_data.get("short_description"),
+        full_description=event_data.get("full_description"),
+        venue=event_data.get("venue"),
+        address=event_data.get("address"),
+        city=event_data.get("city"),
+        start_date=event_data.get("start_date"),
+        end_date=event_data.get("end_date"),
+        max_capacity=event_data.get("max_capacity", 100),
+        status=event_data.get("status", "DRAFT"),
+        is_featured=event_data.get("is_featured", False),
+        price_min=event_data.get("price_min", 0.0),
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return {"success": True, "message": "Event created", "data": {"id": event.id}}
