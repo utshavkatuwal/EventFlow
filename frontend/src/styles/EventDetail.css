@@ -1,0 +1,153 @@
+.event-detail {
+  margin-top: var(--space-5);
+}
+
+.event-back {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.event-detail-hero {
+  margin-bottom: var(--space-6);
+}
+
+.event-detail-hero img,
+.event-hero-placeholder {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
+.event-hero-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-border);
+  font-size: 6rem;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+.event-detail-header {
+  margin-top: var(--space-5);
+}
+
+.event-detail-category {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+  margin-bottom: var(--space-2);
+}
+
+.event-detail-header h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.02em;
+}
+
+.event-detail-meta {
+  display: flex;
+  gap: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.event-detail-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+}
+
+.event-detail-main .section {
+  margin-bottom: var(--space-6);
+}
+
+.event-detail-main h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+}
+
+.event-detail-main p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.event-detail-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: 80px;
+  align-self: start;
+}
+
+.sidebar-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.sidebar-card h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+.ticket-option {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  cursor: pointer;
+}
+
+.ticket-option:last-of-type {
+  border-bottom: none;
+}
+
+.ticket-option.selected {
+  background: var(--color-accent-light);
+  padding: var(--space-3);
+  margin: 0 calc(-1 * var(--space-5));
+  border-radius: var(--radius-sm);
+}
+
+.ticket-info {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.ticket-price {
+  color: var(--color-accent);
+}
+
+.ticket-avail {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .event-detail-body {
+    grid-template-columns: 1fr;
+  }
+
+  .event-detail-sidebar {
+    position: static;
+  }
+
+  .event-detail-header h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .event-detail-meta {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
