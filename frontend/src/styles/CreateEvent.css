@@ -1,0 +1,46 @@
+.create-event-form {
+  max-width: 700px;
+}
+
+.create-event-form .form-group {
+  margin-bottom: var(--space-4);
+}
+
+.create-event-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.create-event-form input,
+.create-event-form select,
+.create-event-form textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+.create-event-form input:focus,
+.create-event-form select:focus,
+.create-event-form textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.form-success {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .create-event-form .form-row {
+    grid-template-columns: 1fr;
+  }
+}
