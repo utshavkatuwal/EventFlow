@@ -1,0 +1,11 @@
+{
+  "name": "eventflow-backend",
+  "version": "1.0.0",
+  "description": "EventFlow FastAPI backend",
+  "main": "app/main.py",
+  "scripts": {
+    "dev": "uvicorn app.main:app --reload --port 8000",
+    "test": "pytest tests/ -v",
+    "seed": "python scripts/seed.py"
+  }
+}

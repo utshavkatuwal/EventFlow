@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: eventflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: eventflow
+      MYSQL_USER: eventflow_user
+      MYSQL_PASSWORD: eventflow_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+
+  backend:
+    build: ./backend
+    container_name: eventflow-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://eventflow_user:eventflow_password@mysql:3306/eventflow
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=eventflow
+      - DB_USER=eventflow_user
+      - DB_PASSWORD=eventflow_password
+      - SECRET_KEY=your-super-secret-key-change-this-in-production
+      - CORS_ORIGINS=http://localhost:5173
+      - UPLOAD_DIRECTORY=uploads/
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      - mysql
+
+  frontend:
+    build: ./frontend
+    container_name: eventflow-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
