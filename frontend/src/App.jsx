@@ -6,6 +6,7 @@ import RequireAuth from './components/RequireAuth.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Loading from './components/Loading.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ScrollToTop from './components/ScrollToTop.jsx';
 
 // Lazy loaded pages
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -302,6 +303,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <NavProvider>
+      <ScrollToTop />
       <AppRoutes />
     </NavProvider>
   );
