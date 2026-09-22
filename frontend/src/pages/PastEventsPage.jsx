@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './PastEvents.css';
+import '../styles/PastEvents.css';
 import SimpleEventCard from '../components/SimpleEventCard';
 
 export default function PastEventsPage() {

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import EventCard from '../components/EventCard';
 import Loading from '../components/Loading';
-import './EventsPage.css';
+import '../styles/EventsPage.css';
 
 export default function EventsPage() {
   const [searchParams] = useSearchParams();

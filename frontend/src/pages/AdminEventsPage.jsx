@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './AdminEvents.css';
+import '../styles/AdminEvents.css';
 import SimpleEventCard from '../components/SimpleEventCard';
 
 export default function AdminEventsPage() {

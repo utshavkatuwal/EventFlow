@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import QRCode from 'qrcode.react';
 import Badge from '../components/Badge';
-import './EventDetail.css';
+import '../styles/EventDetail.css';
 
 export default function EventDetailPage() {
   const { id } = useParams();

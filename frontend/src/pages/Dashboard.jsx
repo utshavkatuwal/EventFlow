@@ -1,10 +1,7 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import RequireAuth from '../components/RequireAuth';
-import ProtectedRoute from '../components/ProtectedRoute';
-import Loading from '../components/Loading';
-import { EventCard } from '../components/EventCard';
+import EventCard from '../components/EventCard';
 
 export default function UserDashboard({ events }) {
   const { user } = useAuth();
@@ -12,7 +9,6 @@ export default function UserDashboard({ events }) {
 
   const upcoming = events?.filter((ev) => new Date(ev.start_date) >= new Date());
   const past = events?.filter((ev) => new Date(ev.start_date) < new Date());
-  const saved = events;
 
   return (
     <>

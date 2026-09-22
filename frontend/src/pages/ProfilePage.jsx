@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './Profile.css';
+import '../styles/Profile.css';
 
 export default function ProfilePage() {
   const { user, login, logout } = useAuth();

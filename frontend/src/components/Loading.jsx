@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { apiFetch } from '../services/api';
+import React from 'react';
 import '../styles/Loading.css';
 
 export default function Loading({ text = 'Loading...' }) {

@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import Modal from '../components/Modal';
 import Input from '../components/Input';
 import SimpleEventCard from '../components/SimpleEventCard';
-import './EventSearch.css';
+import '../styles/EventSearch.css';
 
 export default function EventSearchPage() {
   const [query, setQuery] = useState('');

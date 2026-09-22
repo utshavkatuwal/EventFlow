@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './MyTickets.css';
 import QRCode from 'qrcode.react';
+import '../styles/MyTickets.css';
 
 export default function MyTicketsPage() {
   const { user } = useAuth();

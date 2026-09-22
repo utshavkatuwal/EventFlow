@@ -3,52 +3,55 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  border: 2px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
-.btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--accent);
+  color: #1a1a1f;
+  border-color: var(--accent);
+  font-weight: 600;
 }
 
-.btn-primary:hover {
-  background: var(--color-accent-hover);
+.btn-primary:hover:not(:disabled) {
+  background: #b8b8d4;
+  border-color: #b8b8d4;
+  box-shadow: 0 0 20px rgba(166, 166, 190, 0.2);
 }
 
-.btn-secondary {
+.btn-ghost {
   background: transparent;
-  color: var(--color-text);
-  border-color: var(--color-border);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
 }
 
-.btn-secondary:hover {
-  border-color: var(--color-text-tertiary);
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-strong);
 }
 
-.btn-sm {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-sm);
+.btn-sm { padding: 8px 16px; font-size: var(--fs-sm); }
+.btn-md { padding: 10px 20px; font-size: var(--fs-base); }
+.btn-lg { padding: 14px 28px; font-size: var(--fs-md); }
+
+.btn-danger {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: rgba(248,113,113,0.2);
 }
 
-.btn-md {
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--font-size-base);
-}
-
-.btn-lg {
-  padding: var(--space-4) var(--space-6);
-  font-size: var(--font-size-md);
+.btn-success {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: rgba(52,211,153,0.2);
 }

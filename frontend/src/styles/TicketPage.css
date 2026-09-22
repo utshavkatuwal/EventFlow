@@ -1,0 +1,15 @@
+.ticket-container { max-width: 600px; margin: 0 auto; }
+.ticket-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-6); }
+.ticket-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-5); }
+.ticket-header h1 { font-size: var(--fs-xl); font-weight: 700; }
+.ticket-status { display: inline-block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--fs-sm); font-weight: 600; }
+.ticket-status.valid { background: var(--success-bg); color: var(--success); }
+.ticket-status.used { background: var(--success-bg); color: var(--success); }
+.ticket-status.cancelled { background: var(--error-bg); color: var(--error); }
+.ticket-details { margin-bottom: var(--space-5); }
+.ticket-field { margin-bottom: var(--space-3); }
+.ticket-field label { display: block; font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: var(--space-1); }
+.ticket-field span { font-size: var(--fs-base); color: var(--text-primary); }
+.ticket-qr { text-align: center; padding: var(--space-5); background: var(--bg-secondary); border-radius: var(--radius-md); }
+.ticket-qr h3 { margin-bottom: var(--space-4); }
+.ticket-checked-in { text-align: center; padding: var(--space-5); background: var(--success-bg); border-radius: var(--radius-md); }

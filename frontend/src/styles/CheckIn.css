@@ -1,72 +1,22 @@
-.checkin-container {
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.checkin-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-}
-
-.checkin-card h2 {
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--space-2);
-}
-
-.checkin-subtitle {
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-5);
-}
-
-.checkin-input-group {
-  display: flex;
-  gap: var(--space-3);
-}
-
+.checkin-container { max-width: 480px; margin: 0 auto; }
+.checkin-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-6); }
+.checkin-card h2 { font-size: var(--fs-xl); margin-bottom: var(--space-2); }
+.checkin-subtitle { color: var(--text-secondary); margin-bottom: var(--space-5); }
+.checkin-input-group { display: flex; gap: var(--space-3); }
 .checkin-input-group input {
   flex: 1;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-base);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
 }
-
-.checkin-input-group input:focus {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.checkin-result {
-  margin-top: var(--space-5);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-}
-
-.checkin-result.valid {
-  background: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.checkin-result.invalid {
-  background: #fdf0ef;
-  color: var(--color-error);
-}
-
-.checkin-result h3 {
-  font-size: var(--font-size-md);
-  margin-bottom: var(--space-1);
-}
-
-.checkin-time {
-  font-size: var(--font-size-sm);
-  margin-top: var(--space-2);
-}
-
-.ticket-code {
-  font-family: monospace;
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  margin-top: var(--space-2);
-}
+.checkin-input-group input:focus { outline: none; border-color: var(--border-focus); }
+.checkin-input-group input::placeholder { color: var(--text-muted); }
+.checkin-result { margin-top: var(--space-5); padding: var(--space-4); border-radius: var(--radius-md); }
+.checkin-result.valid { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52,211,153,0.15); }
+.checkin-result.invalid { background: var(--error-bg); color: var(--error); border: 1px solid rgba(248,113,113,0.15); }
+.checkin-result h3 { font-size: var(--fs-md); margin-bottom: var(--space-1); }
+.checkin-time { font-size: var(--fs-sm); margin-top: var(--space-2); }
+.ticket-code { font-family: monospace; font-size: var(--fs-lg); font-weight: 700; margin-top: var(--space-2); }

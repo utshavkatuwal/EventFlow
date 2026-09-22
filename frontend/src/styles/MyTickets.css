@@ -1,87 +1,12 @@
-.tickets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-5);
-}
-
-.ticket-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-5);
-}
-
-.ticket-card.used {
-  border-color: var(--color-success);
-}
-
-.ticket-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--space-3);
-}
-
-.ticket-card-header h3 {
-  font-size: var(--font-size-md);
-  font-weight: 600;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-}
-
-.status-valid,
-.status-confirmed,
-.status-approved,
-.status-published {
-  background: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.status-used,
-.status-checked_in {
-  background: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.status-cancelled,
-.status-rejected,
-.status-inactive {
-  background: #fdf0ef;
-  color: var(--color-error);
-}
-
-.status-draft,
-.status-pending_review,
-.status-open {
-  background: #fef9e7;
-  color: var(--color-warning);
-}
-
-.ticket-card-body {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-4);
-}
-
-.ticket-card-body p {
-  margin-bottom: var(--space-1);
-}
-
-.ticket-card-qr {
-  text-align: center;
-  padding: var(--space-3);
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-}
-
-.ticket-card-qr p {
-  margin-top: var(--space-2);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
+.tickets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); }
+.ticket-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-5); }
+.ticket-card.used { border-color: rgba(52,211,153,0.2); }
+.ticket-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-3); }
+.ticket-card-header h3 { font-size: var(--fs-md); font-weight: 600; }
+.status-valid, .status-confirmed, .status-approved, .status-published, .status-used, .status-checked_in { background: var(--success-bg); color: var(--success); }
+.status-cancelled, .status-rejected, .status-inactive { background: var(--error-bg); color: var(--error); }
+.status-draft, .status-pending_review, .status-open { background: var(--warning-bg); color: var(--warning); }
+.ticket-card-body { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--space-4); }
+.ticket-card-body p { margin-bottom: var(--space-1); }
+.ticket-card-qr { text-align: center; padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-sm); }
+.ticket-card-qr p { margin-top: var(--space-2); font-size: var(--fs-xs); color: var(--text-muted); }
