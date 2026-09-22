@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './AdminReports.css';
+import '../styles/AdminReports.css';
 
 export default function AdminReportsPage() {
   const [reports, setReports] = useState(null);

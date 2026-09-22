@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
-import './CreateEvent.css';
+import Navbar from '../components/Navbar';
+import '../styles/CreateEvent.css';
 
 const CATEGORIES = [
   'Technology', 'Education', 'Business', 'Music', 'Sports',

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useParams } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './CategoryEvents.css';
 import SimpleEventCard from '../components/SimpleEventCard';
+import '../styles/CategoryEvents.css';
 
-export default function CategoryEventsPage({ match }) {
-  const categoryId = match.params.id;
+export default function CategoryEventsPage() {
+  const { id } = useParams();
   const [category, setCategory] = useState(null);
   const [events, setEvents] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,8 +16,8 @@ export default function CategoryEventsPage({ match }) {
     async function load() {
       try {
         const [catData, evData] = await Promise.all([
-          apiFetch(`/categories/${categoryId}`),
-          apiFetch(`/events?category_id=${categoryId}`),
+          apiFetch(`/categories/${id}`),
+          apiFetch(`/events?category_id=${id}`),
         ]);
         setCategory(catData?.data || catData);
         setEvents(evData?.items || []);
@@ -28,7 +28,7 @@ export default function CategoryEventsPage({ match }) {
       }
     }
     load();
-  }, [categoryId]);
+  }, [id]);
 
   if (loading) return <Loading />;
   if (!category) return <p>Category not found.</p>;

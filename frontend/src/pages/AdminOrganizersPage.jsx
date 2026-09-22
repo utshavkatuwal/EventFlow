@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './AdminOrganizers.css';
+import '../styles/AdminOrganizers.css';
 
 export default function AdminOrganizersPage() {
   const [organizers, setOrganizers] = useState(null);

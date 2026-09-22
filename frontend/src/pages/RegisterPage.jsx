@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
-import './Auth.css';
+import Navbar from '../components/Navbar';
+import '../styles/Auth.css';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ email: '', username: '', password: '', first_name: '', last_name: '', phone: '' });
@@ -40,15 +40,13 @@ export default function RegisterPage() {
           <h1>Sign Up</h1>
           <form onSubmit={handleSubmit} className="auth-form">
             {error && <div className="form-error" role="alert">{error}</div>}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="first_name">First Name</label>
-                <input id="first_name" name="first_name" type="text" value={form.first_name} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label htmlFor="last_name">Last Name</label>
-                <input id="last_name" name="last_name" type="text" value={form.last_name} onChange={handleChange} />
-              </div>
+            <div className="form-group">
+              <label htmlFor="first_name">First Name</label>
+              <input id="first_name" name="first_name" type="text" value={form.first_name} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="last_name">Last Name</label>
+              <input id="last_name" name="last_name" type="text" value={form.last_name} onChange={handleChange} />
             </div>
             <div className="form-group">
               <label htmlFor="email">Email</label>

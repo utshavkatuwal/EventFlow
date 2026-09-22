@@ -1,105 +1,144 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import EventCard from '../components/EventCard';
-import Loading from '../components/Loading';
-import './Home.css';
+import '../styles/Home.css';
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState(null);
   const [categories, setCategories] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [error, setError] = useState('');
+  const [heroQuery, setHeroQuery] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const [evData, catData, statsData] = await Promise.all([
-          apiFetch('/events?per_page=6').catch(() => null),
-          apiFetch('/categories').catch(() => null),
-          apiFetch('/events/stats').catch(() => null),
+        const [ev, cat] = await Promise.allSettled([
+          apiFetch('/events?per_page=6'),
+          apiFetch('/categories'),
         ]);
-        if (evData) setEvents(evData);
-        if (catData) setCategories(catData);
-        if (statsData) setStats(statsData);
-      } catch (e) {
-        setError('Failed to load events. Please try again.');
-      }
+        if (ev.status === 'fulfilled' && ev.value) setEvents(ev.value);
+        if (cat.status === 'fulfilled' && cat.value) setCategories(cat.value);
+      } catch {}
+      setLoaded(true);
     }
     load();
   }, []);
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    navigate(heroQuery.trim() ? `/search?q=${encodeURIComponent(heroQuery.trim())}` : '/events');
+  };
+
   return (
     <>
       <Navbar />
-      <main className="main-content">
+      <main>
         <section className="hero">
-          <h1>Discover Events in Nepal</h1>
-          <p className="hero-subtitle">
-            Find and register for technology, business, arts, and community events across Nepal.
-          </p>
-          <div className="hero-search">
-            <input type="text" placeholder="Search events by title, location, or category..." />
-            <Link to="/events" className="btn btn-primary">
-              Search
-            </Link>
+          <div className="hero-bg-orb" />
+          <div className="hero-bg-orb orb-2" />
+          <div className="hero-inner">
+            <p className="hero-eyebrow">Event Discovery Platform</p>
+            <h1 className="hero-title">Discover Events<br />in Nepal</h1>
+            <p className="hero-desc">Find and register for technology, business, arts, and community events happening across Nepal.</p>
+            <form className="hero-form" onSubmit={handleSearch}>
+              <div className="hero-input-wrap">
+                <svg className="hero-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Search by title, location, or category..." value={heroQuery} onChange={(e) => setHeroQuery(e.target.value)} />
+              </div>
+              <button type="submit" className="btn btn-primary btn-lg">Search</button>
+            </form>
+            <div className="hero-chips">
+              <Link to="/events" className="chip">Browse All Events</Link>
+              <Link to="/register" className="chip">Host an Event</Link>
+              <Link to="/search" className="chip">Advanced Search</Link>
+            </div>
           </div>
         </section>
 
-        {stats && (
-          <section className="home-stats">
-            <div className="stat">
-              <span className="stat-number">{stats.total_events}</span>
-              <span className="stat-label">Events</span>
+        {categories?.items?.length > 0 && (
+          <section className="section">
+            <div className="section-head">
+              <h2>Categories</h2>
+              <Link to="/events" className="section-more">View All →</Link>
             </div>
-            <div className="stat">
-              <span className="stat-number">{stats.upcoming_events}</span>
-              <span className="stat-label">Upcoming</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">{stats.total_registrations}</span>
-              <span className="stat-label">Registrations</span>
-            </div>
-          </section>
-        )}
-
-        {categories && categories.items && categories.items.length > 0 && (
-          <section className="home-categories">
-            <h2>Browse by Category</h2>
-            <div className="category-grid">
-              {categories.items.map((cat) => (
-                <Link key={cat.id} to={`/events?category=${cat.id}`} className="category-link">
-                  {cat.name}
+            <div className="cat-grid">
+              {categories.items.map((c) => (
+                <Link key={c.id} to={`/categories/${c.id}`} className="cat-card">
+                  <span className="cat-name">{c.name}</span>
                 </Link>
               ))}
             </div>
           </section>
         )}
 
-        <section className="home-events">
-          <h2>Featured Events</h2>
-          {error && <p>{error}</p>}
-          {!events && !error && <Loading />}
-          {events && events.items && events.items.length === 0 && (
-            <p>No events available yet. Check back soon!</p>
+        <section className="section">
+          <div className="section-head">
+            <h2>Featured Events</h2>
+            <Link to="/events" className="section-more">View All →</Link>
+          </div>
+          {!loaded && (
+            <div className="empty-box">
+              <div className="empty-spinner" />
+              <p>Loading events...</p>
+            </div>
           )}
-          {events && events.items && events.items.length > 0 && (
+          {loaded && events?.items?.length === 0 && (
+            <div className="empty-box">
+              <h3>No events yet</h3>
+              <p>Events will appear here once organizers publish them.</p>
+              <Link to="/register" className="btn btn-primary btn-md" style={{ marginTop: 16 }}>Become an Organizer</Link>
+            </div>
+          )}
+          {loaded && events?.items?.length > 0 && (
             <div className="events-grid">
-              {events.items.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
+              {events.items.map((ev) => <EventCard key={ev.id} event={ev} />)}
+            </div>
+          )}
+          {loaded && !events && (
+            <div className="empty-box">
+              <h3>Backend not connected</h3>
+              <p>Start the backend server to see live events, categories, and stats.</p>
             </div>
           )}
         </section>
 
-        <section className="home-cta">
-          <h2>Organizing an Event?</h2>
-          <p>Create your first event and start reaching attendees in Nepal.</p>
-          <Link to="/register" className="btn btn-primary">
-            Get Started
-          </Link>
+        <section className="section">
+          <div className="section-head"><h2>How It Works</h2></div>
+          <div className="steps-row">
+            <div className="step-card">
+              <span className="step-num">01</span>
+              <h3>Discover</h3>
+              <p>Browse curated events across Nepal. Filter by category, date, location, and price.</p>
+            </div>
+            <div className="step-card">
+              <span className="step-num">02</span>
+              <h3>Register</h3>
+              <p>Select your ticket, complete registration, and receive your digital ticket instantly.</p>
+            </div>
+            <div className="step-card">
+              <span className="step-num">03</span>
+              <h3>Attend</h3>
+              <p>Show your QR ticket at the entrance. Fast, secure, contactless check-in.</p>
+            </div>
+          </div>
         </section>
+
+        <section className="section">
+          <div className="cta-box">
+            <h2>Organizing an Event?</h2>
+            <p>Create your event, manage tickets, track registrations, and check in attendees.</p>
+            <div className="cta-btns">
+              <Link to="/register" className="btn btn-primary btn-lg">Get Started Free</Link>
+              <Link to="/events" className="btn btn-ghost btn-lg">Browse Events</Link>
+            </div>
+          </div>
+        </section>
+
+        <Footer />
       </main>
     </>
   );

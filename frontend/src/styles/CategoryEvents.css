@@ -1,13 +1,3 @@
-.category-header {
-  margin-bottom: var(--space-6);
-}
-
-.category-header h1 {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  margin-bottom: var(--space-2);
-}
-
-.category-header p {
-  color: var(--color-text-secondary);
-}
+.category-header { margin-bottom: var(--space-6); }
+.category-header h1 { font-size: var(--fs-2xl); font-weight: 700; margin-bottom: var(--space-2); }
+.category-header p { color: var(--text-secondary); }

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
 import NotificationBadge from '../components/NotificationBadge';
-import './Notifications.css';
+import '../styles/Notifications.css';
 
 export default function NotificationsPage() {
   const { user } = useAuth();

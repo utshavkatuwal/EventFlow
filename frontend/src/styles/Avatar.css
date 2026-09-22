@@ -3,10 +3,10 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--color-accent);
-  color: #fff;
+  background: var(--accent-dim);
+  color: var(--accent);
   font-weight: 700;
-  font-family: var(--font-sans);
+  font-family: var(--font);
 }
 
 .avatar-xs { width: 24px; height: 24px; font-size: 10px; }

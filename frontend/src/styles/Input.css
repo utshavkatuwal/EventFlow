@@ -5,22 +5,21 @@
 }
 
 .input-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--fs-sm);
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--text-secondary);
 }
 
 .input,
 .textarea,
 .select {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--font-size-base);
-  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -28,29 +27,12 @@
 .textarea:focus,
 .select:focus {
   outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-light);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.input-error {
-  border-color: var(--color-error);
-}
-
-.input-error:focus {
-  box-shadow: 0 0 0 3px #fdf0ef;
-}
-
-.textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.input-error-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-error);
-}
-
-.input-hint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
+.input::placeholder { color: var(--text-muted); }
+.input-error { border-color: var(--error); }
+.textarea { min-height: 100px; resize: vertical; }
+.input-error-text { font-size: var(--fs-xs); color: var(--error); }
+.input-hint { font-size: var(--fs-xs); color: var(--text-muted); }

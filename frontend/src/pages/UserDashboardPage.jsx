@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './Dashboard.css';
+import '../styles/Dashboard.css';
 
 export default function UserDashboardPage() {
   const { user } = useAuth();

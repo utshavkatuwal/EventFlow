@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
-import Navbar from './Navbar';
+import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
-import './ReviewsPage.css';
+import '../styles/ReviewsPage.css';
 
 export default function ReviewsPage() {
   const { user } = useAuth();

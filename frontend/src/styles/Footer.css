@@ -1,26 +1,23 @@
 .footer {
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-top: 1px solid var(--border-default);
   margin-top: var(--space-8);
 }
 
 .footer-inner {
-  max-width: var(--max-width);
+  max-width: var(--max-w);
   margin: 0 auto;
   padding: var(--space-7) var(--space-5);
   text-align: center;
 }
 
-.footer-brand {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  margin-bottom: var(--space-2);
+.footer-logo {
+  height: 36px;
+  width: auto;
+  margin: 0 auto var(--space-3);
+  opacity: 0.7;
 }
 
-.footer-tagline {
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-4);
-}
+.footer-tagline { color: var(--text-secondary); margin-bottom: var(--space-4); }
 
 .footer-links {
   display: flex;
@@ -29,16 +26,5 @@
   margin-bottom: var(--space-5);
 }
 
-.footer-links a {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.footer-links a:hover {
-  color: var(--color-text);
-}
-
-.footer-copy {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-}
+.footer-links a { color: var(--text-secondary); font-size: var(--fs-sm); font-weight: 500; }
+.footer-copy { font-size: var(--fs-sm); color: var(--text-muted); }

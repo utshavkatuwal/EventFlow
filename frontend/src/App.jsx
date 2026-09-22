@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
-import { ApiProvider } from './context/ApiContext.jsx';
 import { NavProvider } from './context/NavContext.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -302,10 +301,8 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <ApiProvider>
-      <NavProvider>
-        <AppRoutes />
-      </NavProvider>
-    </ApiProvider>
+    <NavProvider>
+      <AppRoutes />
+    </NavProvider>
   );
 }
