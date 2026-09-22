@@ -1,7 +1,8 @@
 import React from 'react';
+import '../styles/Card.css';
+import Badge from './Badge.jsx';
 import { Link } from 'react-router-dom';
-import Badge from './Badge';
-import '../styles/EventList.css';
+import { getEventImageUrl } from '../utils/images.js';
 
 export default function EventList({ events, title = '' }) {
   if (!events || events.length === 0) {
@@ -21,11 +22,16 @@ export default function EventList({ events, title = '' }) {
         {events.map((ev) => (
           <article key={ev.id} className="event-card">
             <div className="event-card-image">
-              {ev.cover_image_url ? (
-                <img src={ev.cover_image_url} alt={ev.title} loading="lazy" />
-              ) : (
-                <div className="event-card-placeholder">{ev.title?.charAt(0) || '?'}</div>
-              )}
+              <img
+                src={getEventImageUrl(ev)}
+                alt={ev.title || 'Event'}
+                loading="lazy"
+                width="640"
+                height="400"
+                onError={(e) => {
+                  e.target.src = getEventImageUrl({ ...ev, cover_image_url: null });
+                }}
+              />
             </div>
             <div className="event-card-body">
               <Badge variant="primary" size="sm">{ev.category_name || 'Event'}</Badge>

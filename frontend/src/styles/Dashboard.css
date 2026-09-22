@@ -56,17 +56,43 @@
 
 .dashboard-event-card {
   display: block;
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
+  background: rgba(19,19,26,0.54);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 14px;
   margin-bottom: var(--space-3);
-  transition: border-color 0.15s, background 0.15s;
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), border-color 0.25s;
+  overflow: hidden;
 }
 
 .dashboard-event-card:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-card-hover);
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.14);
+}
+
+.dashboard-event-image {
+  width: 100%;
+  height: 150px;
+  border-radius: 13px;
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+  background: #101016;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.dashboard-event-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+  display: block;
+}
+
+.dashboard-event-card:hover .dashboard-event-image img {
+  transform: scale(1.03);
 }
 
 .dashboard-event-card h3 {

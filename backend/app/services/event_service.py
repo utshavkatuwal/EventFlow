@@ -146,6 +146,7 @@ def _seed_events(db):
             status="PUBLISHED",
             is_featured=True,
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -160,6 +161,7 @@ def _seed_events(db):
             max_capacity=100,
             status="PUBLISHED",
             price_min=500.0,
+            cover_image_url="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -176,6 +178,7 @@ def _seed_events(db):
             status="PUBLISHED",
             is_featured=True,
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -190,6 +193,7 @@ def _seed_events(db):
             max_capacity=30,
             status="PUBLISHED",
             price_min=250.0,
+            cover_image_url="https://images.unsplash.com/photo-1531498860502-7c67cf02f657?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -203,6 +207,7 @@ def _seed_events(db):
             max_capacity=300,
             status="PENDING_REVIEW",
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -217,6 +222,7 @@ def _seed_events(db):
             max_capacity=150,
             status="DRAFT",
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -231,6 +237,7 @@ def _seed_events(db):
             max_capacity=200,
             status="COMPLETED",
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1556761175-6788093460d7?w=800&q=80&auto=format&fit=crop",
         ),
         Event(
             organizer_id=organizer.id,
@@ -245,6 +252,7 @@ def _seed_events(db):
             max_capacity=80,
             status="PUBLISHED",
             price_min=0.0,
+            cover_image_url="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=80&auto=format&fit=crop",
         ),
     ]
 

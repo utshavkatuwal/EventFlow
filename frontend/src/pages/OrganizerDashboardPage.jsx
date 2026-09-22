@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
+import { getEventImageUrl } from '../utils/images.js';
 import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
 import '../styles/Dashboard.css';
@@ -54,9 +55,18 @@ export default function OrganizerDashboardPage() {
             <div className="events-grid">
               {events?.map((ev) => (
                 <Link key={ev.id} to={`/events/${ev.id}`} className="dashboard-event-card">
-                  {ev.cover_image_url && (
-                    <img src={ev.cover_image_url} alt={ev.title} style={{width:'100%', height:'160px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px'}} />
-                  )}
+                  <div className="dashboard-event-image">
+                    <img
+                      src={getEventImageUrl(ev)}
+                      alt={ev.title || 'Event'}
+                      loading="lazy"
+                      width="640"
+                      height="160"
+                      onError={(e) => {
+                        e.target.src = getEventImageUrl({ ...ev, cover_image_url: null });
+                      }}
+                    />
+                  </div>
                   <h3>{ev.title}</h3>
                   <span className={`status-badge status-${ev.status.toLowerCase().replace('_','-')}`}>{ev.status}</span>
                   <p style={{fontSize:'var(--fs-sm)', color:'var(--text-secondary)', marginTop:'4px'}}>{ev.start_date?.slice(0, 10)}</p>

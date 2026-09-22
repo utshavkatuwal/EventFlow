@@ -6,19 +6,22 @@ import '../styles/Footer.css';
 
 export default function Footer() {
   const { user } = useAuth();
-
   return (
-    <footer className="footer">
-      <div className="footer-inner">
-        <img src={logo} alt="EventFlow" className="footer-logo" />
-        <p className="footer-tagline">Discover events in Nepal.</p>
-        <div className="footer-links">
-          <Link to="/events">Events</Link>
-          <Link to="/search">Search</Link>
-          <Link to="/register">Host Event</Link>
-          {user && <Link to="/user/dashboard">Dashboard</Link>}
+    <footer className="footer-premium">
+      <div className="foot-glass glass-secondary glass-stroke">
+        <div className="foot-top">
+          <div className="foot-brand">
+            <span className="foot-mark"><img src={logo} alt="EventFlow" /></span>
+            <b>EventFlow</b>
+            <p>Discover moments worth remembering — across Nepal.</p>
+          </div>
+          <nav className="foot-nav" aria-label="Footer">
+            <div className="foot-col"><span>Explore</span><Link to="/">Home</Link><Link to="/events">Events</Link><Link to="/search">Search</Link></div>
+            <div className="foot-col"><span>Organize</span><Link to="/register">Create event</Link>{user?.role === 'organizer' && <Link to="/organizer/dashboard">Dashboard</Link>}{user?.role === 'admin' && <Link to="/admin/events">Admin</Link>}</div>
+            <div className="foot-col"><span>Account</span>{user ? (<><Link to="/user/profile">Profile</Link><Link to="/user/saved">Saved</Link><Link to="/user/dashboard">Dashboard</Link></>) : (<><Link to="/login">Log in</Link><Link to="/register">Sign up</Link></>)}</div>
+          </nav>
         </div>
-        <p className="footer-copy">EventFlow. All rights reserved.</p>
+        <div className="foot-bottom"><p>© {new Date().getFullYear()} EventFlow. Crafted with frosted glass.</p><span className="foot-pill glass-tert">● Live</span></div>
       </div>
     </footer>
   );

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../services/api';
+import { getEventImageUrl } from '../utils/images.js';
 import Navbar from '../components/Navbar';
 import Loading from '../components/Loading';
 import '../styles/Dashboard.css';
@@ -99,11 +100,16 @@ function EventCard({ event }) {
   return (
     <article className="event-card">
       <div className="event-card-image">
-        {event.cover_image_url ? (
-          <img src={event.cover_image_url} alt={event.title} loading="lazy" />
-        ) : (
-          <div className="event-card-placeholder">{event.title?.charAt(0) || '?'}</div>
-        )}
+        <img
+          src={getEventImageUrl(event)}
+          alt={event.title || 'Event'}
+          loading="lazy"
+          width="640"
+          height="400"
+          onError={(e) => {
+            e.target.src = getEventImageUrl({ ...event, cover_image_url: null });
+          }}
+        />
       </div>
       <div className="event-card-body">
         <span className="event-card-category">{event.category_name || 'Event'}</span>

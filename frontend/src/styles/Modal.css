@@ -1,55 +1,22 @@
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  z-index: 1000;
+  position: fixed; inset: 0;
+  background: rgba(4,4,8,0.6);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 1000;
 }
-
 .modal {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  max-width: 100%;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  background: rgba(17,17,24,0.82);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4); backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 22px;
+  max-width: 100%; width: 100%; max-height: 90vh; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 28px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.09);
 }
-
-.modal.sm { max-width: 400px; }
-.modal.md { max-width: 560px; }
-.modal.lg { max-width: 800px; }
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-5);
-  border-bottom: 1px solid var(--border-default);
-}
-
-.modal-header h2 { font-size: var(--fs-lg); font-weight: 600; }
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: var(--fs-2xl);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.modal-close:hover { color: var(--text-primary); }
-
-.modal-body {
-  padding: var(--space-5);
-  overflow-y: auto;
-  flex: 1;
-}
+.modal.sm { max-width: 400px; } .modal.md { max-width: 560px; } .modal.lg { max-width: 800px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.modal-header h2 { font-size: 1.08rem; font-weight: 700; letter-spacing: -0.015em; }
+.modal-close { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09); width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; color: var(--text-secondary); cursor: pointer; transition: background 0.2s, color 0.2s; line-height: 1; }
+.modal-close:hover { color: #fff; background: rgba(255,255,255,0.11); }
+.modal-body { padding: 22px; overflow-y: auto; flex: 1; }
