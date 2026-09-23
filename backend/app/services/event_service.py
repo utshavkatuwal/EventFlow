@@ -252,7 +252,7 @@ def _seed_events(db):
             max_capacity=80,
             status="PUBLISHED",
             price_min=0.0,
-            cover_image_url="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=80&auto=format&fit=crop",
+            cover_image_url="https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=800&q=80&auto=format&fit=crop",
         ),
     ]
 

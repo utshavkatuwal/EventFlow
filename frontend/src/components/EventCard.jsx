@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getEventImageUrl } from '../utils/images.js';
+import '../styles/Card.css';
 
 function fmtDate(dateStr) {
   if (!dateStr) return '';

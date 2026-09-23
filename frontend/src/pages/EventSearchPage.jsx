@@ -16,22 +16,34 @@ export default function EventSearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ category: '', date_from: '', date_to: '', city: sp.get('city') || '' });
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    if (!query.trim() && !filters.category && !filters.date_from && !filters.date_to && !filters.city) return;
+  const canSearch = query.trim() || filters.category || filters.date_from || filters.date_to || filters.city;
+
+  const runSearch = async (q, f) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ q: query });
-      if (filters.category) params.append('category', filters.category);
-      if (filters.date_from) params.append('date_from', filters.date_from);
-      if (filters.date_to) params.append('date_to', filters.date_to);
-      if (filters.city) params.append('city', filters.city);
+      const params = new URLSearchParams({ q: q.trim() });
+      if (f.category) params.append('category', f.category);
+      if (f.date_from) params.append('date_from', f.date_from);
+      if (f.date_to) params.append('date_to', f.date_to);
+      if (f.city) params.append('city', f.city);
       const data = await apiFetch(`/search?${params}`);
       setResults(data?.items || data?.data || []);
     } catch (e) { console.error(e); setResults([]); } finally { setLoading(false); }
   };
 
-  React.useEffect(() => { if (query || filters.city) handleSearch(); // eslint-disable-next-line
+  const handleSearch = (e) => {
+    e?.preventDefault();
+    if (!canSearch || loading) return;
+    runSearch(query, filters);
+  };
+
+  const quickPick = (q) => {
+    if (loading) return;
+    setQuery(q);
+    runSearch(q, filters);
+  };
+
+  React.useEffect(() => { if (query || filters.city) runSearch(query, filters); // eslint-disable-next-line
   }, []);
 
   return (
@@ -43,10 +55,22 @@ export default function EventSearchPage() {
           <p className="kicker">Search</p>
           <h1>Find your night.</h1>
           <p className="search-sub">Keyword, city, date or category — one search across everything.</p>
-          <form onSubmit={handleSearch} className="search-bar">
+          <form onSubmit={handleSearch} className="search-bar" role="search">
             <span className="s-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Try ‘jazz’, ‘Pokhara’, ‘workshop’…" aria-label="Search events" />
-            <button type="submit" disabled={loading} className="btn btn-primary">{loading ? 'Searching…' : 'Search'}</button>
+            <input
+              type="search"
+              name="q"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Try ‘jazz’, ‘Pokhara’, ‘workshop’…"
+              aria-label="Search events"
+              autoComplete="off"
+              enterKeyHint="search"
+            />
+            <button type="submit" disabled={loading || !canSearch} className="btn btn-primary search-go" title={!canSearch ? 'Type a keyword or set a filter first' : 'Search'}>
+              {loading ? <span className="btn-spinner" aria-hidden /> : null}
+              <span>{loading ? 'Searching' : 'Search'}</span>
+            </button>
           </form>
           <button type="button" className={`filter-toggle glass-tert ${showFilters ? 'on' : ''}`} onClick={() => setShowFilters(!showFilters)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
@@ -65,6 +89,17 @@ export default function EventSearchPage() {
             </div>
           )}
         </div>
+
+        {!results && !loading && (
+          <div className="search-idle glass-secondary">
+            <p>Not sure where to start? Try one of these:</p>
+            <div className="idle-picks">
+              {['Music', 'Technology', 'Workshop', 'Sports', 'Arts'].map((c) => (
+                <button key={c} type="button" className="dchip" onClick={() => quickPick(c)}>{c}</button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {results && (
           <div className="search-results">
