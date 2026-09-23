@@ -17,7 +17,7 @@ const CATEGORY_PHOTOS = {
     'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=1200&q=80&auto=format&fit=crop',
   ],
   Arts: [
-    'https://images.unsplash.com/photo-1515405295579-ba7b45403062?w=1200&q=80&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=1200&q=80&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=1200&q=80&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1554907984-15263bfd63bd?w=1200&q=80&auto=format&fit=crop',
   ],

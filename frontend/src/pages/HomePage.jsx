@@ -45,7 +45,8 @@ export default function HomePage() {
     if (heroQuery.trim()) p.set('q', heroQuery.trim());
     if (heroLoc.trim()) p.set('city', heroLoc.trim());
     if (heroDate) p.set('date_from', heroDate);
-    navigate(`/search${p.toString() ? `?${p.toString()}` : ''}`);
+    const qs = p.toString();
+    navigate(qs ? `/search?${qs}` : '/events');
   };
 
   const featured = events[0];
