@@ -13,6 +13,7 @@ export default function EventSearchPage() {
   const [query, setQuery] = useState(sp.get('q') || '');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ category: '', date_from: '', date_to: '', city: sp.get('city') || '' });
 
@@ -20,15 +21,17 @@ export default function EventSearchPage() {
 
   const runSearch = async (q, f) => {
     setLoading(true);
+    setSearchError('');
     try {
-      const params = new URLSearchParams({ q: q.trim() });
+      const params = new URLSearchParams();
+      if (q.trim()) params.append('q', q.trim());
       if (f.category) params.append('category', f.category);
       if (f.date_from) params.append('date_from', f.date_from);
       if (f.date_to) params.append('date_to', f.date_to);
       if (f.city) params.append('city', f.city);
       const data = await apiFetch(`/search?${params}`);
       setResults(data?.items || data?.data || []);
-    } catch (e) { console.error(e); setResults([]); } finally { setLoading(false); }
+    } catch (e) { setSearchError(e.message || 'Search failed.'); setResults([]); } finally { setLoading(false); }
   };
 
   const handleSearch = (e) => {
@@ -100,6 +103,8 @@ export default function EventSearchPage() {
             </div>
           </div>
         )}
+
+        {searchError && <div className="form-error" role="alert" style={{ marginBottom: 16 }}>{searchError}</div>}
 
         {results && (
           <div className="search-results">

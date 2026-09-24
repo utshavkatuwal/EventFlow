@@ -11,24 +11,28 @@ export default function UserDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [upcoming, setUpcoming] = useState(null);
-  const [past, setPast] = useState(null);
-  const [savedEvents, setSavedEvents] = useState(null);
+  const [upcoming, setUpcoming] = useState([]);
+  const [past, setPast] = useState([]);
+  const [savedEvents, setSavedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
       try {
-        const s = await apiFetch('/user/stats').catch(() => null);
-        const u = await apiFetch('/user/upcoming').catch(() => null);
-        const p = await apiFetch('/user/past').catch(() => null);
-        const sv = await apiFetch('/user/saved').catch(() => null);
-        setStats(s);
-        setUpcoming(u);
-        setPast(p);
-        setSavedEvents(sv);
+        const [s, u, p, sv] = await Promise.all([
+          apiFetch('/user/stats'),
+          apiFetch('/user/upcoming'),
+          apiFetch('/user/past'),
+          apiFetch('/user/saved'),
+        ]);
+        setStats(s?.data || null);
+        setUpcoming(u?.items || []);
+        setPast(p?.items || []);
+        setSavedEvents(sv?.items || []);
       } catch (e) {
         console.error(e);
+        setError(e.message || 'Unable to connect to server.');
       } finally {
         setLoading(false);
       }
@@ -44,10 +48,13 @@ export default function UserDashboardPage() {
       <main className="main-content">
         <h1 className="dashboard-title">My Dashboard</h1>
 
+        {error && <div className="form-error" role="alert" style={{ marginBottom: 16 }}>{error}</div>}
+
         <div className="dashboard-stats">
           <div className="stat"><span className="stat-number">{stats?.total_registrations || 0}</span><span className="stat-label">Registrations</span></div>
           <div className="stat"><span className="stat-number">{stats?.upcoming || 0}</span><span className="stat-label">Upcoming</span></div>
           <div className="stat"><span className="stat-number">{stats?.saved || 0}</span><span className="stat-label">Saved</span></div>
+          <div className="stat"><Link to="/user/tickets" className="stat-label" style={{ textDecoration: 'underline' }}>My Tickets →</Link></div>
         </div>
 
         <section className="dashboard-section">

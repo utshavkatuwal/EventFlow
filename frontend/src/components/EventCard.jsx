@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { getEventImageUrl } from '../utils/images.js';
+import { getSavedIds, setSaved } from '../services/saved.js';
 import '../styles/Card.css';
 
 function fmtDate(dateStr) {
@@ -52,12 +53,30 @@ export function FeaturedCard({ event }) {
 /* STANDARD — image + floating glass info that rises on hover */
 export default function EventCard({ event, onSave, saved, variant = 'standard' }) {
   const [liked, setLiked] = useState(!!saved);
+  const navigate = useNavigate();
   const img = getEventImageUrl(event);
 
-  const toggleSave = (e) => {
+  // When the page doesn't pass `saved`, hydrate from the server once.
+  useEffect(() => {
+    if (saved === undefined && localStorage.getItem('access_token')) {
+      getSavedIds().then((ids) => setLiked(ids.has(event.id))).catch(() => null);
+    }
+  }, [event.id, saved]);
+
+  const toggleSave = async (e) => {
     e.preventDefault(); e.stopPropagation();
-    const next = !liked; setLiked(next);
-    onSave?.(event.id, next);
+    const next = !liked;
+    setLiked(next);
+    if (onSave) {
+      onSave?.(event.id, next);
+      return;
+    }
+    try {
+      await setSaved(event.id, next);
+    } catch (err) {
+      setLiked(!next);
+      if (err?.status === 401) navigate('/login');
+    }
   };
 
   if (variant === 'featured') return <FeaturedCard event={event} />;

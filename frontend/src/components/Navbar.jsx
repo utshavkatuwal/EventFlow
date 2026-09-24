@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getRole, homeForUser } from '../utils/roles';
 import logo from '../assets/logo.png';
 import './Navbar.css';
 
@@ -10,6 +11,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const role = getRole(user);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -20,15 +22,17 @@ export default function Navbar() {
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  const navLinks = [
-    { path: '/', label: 'Home' },
-    { path: '/events', label: 'Explore' },
-    { path: '/search', label: 'Search' },
-  ];
-  if (user) {
-    const dash = user.role === 'organizer' || user.role === 'admin' ? '/organizer/dashboard' : '/user/dashboard';
-    navLinks.push({ path: dash, label: 'Dashboard' });
-  }
+  // Staff see only their area: organizer/admin get Dashboard alone.
+  const navLinks =
+    role === 'organizer' || role === 'admin'
+      ? [{ path: homeForUser(user), label: 'Dashboard' }]
+      : [
+          { path: '/', label: 'Home' },
+          { path: '/events', label: 'Explore' },
+          { path: '/search', label: 'Search' },
+          ...(user ? [{ path: homeForUser(user), label: 'Dashboard' }] : []),
+          ...(role === 'user' ? [{ path: '/user/tickets', label: 'My Tickets' }] : []),
+        ];
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
@@ -37,7 +41,7 @@ export default function Navbar() {
   return (
     <div className="nav-float-wrap">
       <header className={`navbar-island glass-primary glass-stroke ${scrolled ? 'scrolled' : ''}`}>
-        <Link to="/" className="navbar-brand" aria-label="EventFlow Home">
+        <Link to={role === 'organizer' || role === 'admin' ? homeForUser(user) : '/'} className="navbar-brand" aria-label="EventFlow Home">
           <span className="brand-mark"><img src={logo} alt="" className="navbar-logo" /></span>
           <span className="navbar-wordmark">EventFlow</span>
         </Link>

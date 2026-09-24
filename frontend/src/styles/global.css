@@ -203,8 +203,12 @@ section[id], div[id], h1[id], h2[id], article[id] { scroll-margin-top: calc(var(
   transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
   white-space: nowrap; line-height: 1; letter-spacing: -0.01em;
   will-change: transform;
+  text-decoration: none;
+  user-select: none;
 }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+.btn:focus-visible { outline: 2px solid rgba(255,255,255,0.55); outline-offset: 2px; }
+.btn-block { width: 100%; }
 .btn-primary {
   background: #f2f0eb;
   color: #101016;
@@ -225,6 +229,14 @@ section[id], div[id], h1[id], h2[id], article[id] { scroll-margin-top: calc(var(
 .btn-ghost:hover:not(:disabled) { color: var(--text-primary); background: rgba(255,255,255,0.07); }
 .btn-ghost:active:not(:disabled) { transform: scale(0.97); }
 .btn-danger { background: var(--error-bg); color: var(--error); border-color: rgba(232,154,154,0.22); }
+.btn-danger:hover:not(:disabled) { transform: translateY(-1px); background: rgba(232,154,154,0.16); }
+.btn-danger:active:not(:disabled) { transform: scale(0.97); }
+.btn-success { background: var(--success-bg); color: var(--success); border-color: rgba(125,216,168,0.25); }
+.btn-success:hover:not(:disabled) { transform: translateY(-1px); background: rgba(125,216,168,0.16); }
+.btn-success:active:not(:disabled) { transform: scale(0.97); }
+.btn-error { background: var(--error-bg); color: var(--error); border-color: rgba(232,154,154,0.22); }
+.btn-error:hover:not(:disabled) { transform: translateY(-1px); background: rgba(232,154,154,0.16); }
+.btn-error:active:not(:disabled) { transform: scale(0.97); }
 .btn-sm { padding: 9px 18px; font-size: var(--fs-sm); }
 .btn-md { padding: 12px 24px; font-size: var(--fs-base); }
 .btn-lg { padding: 15px 30px; font-size: var(--fs-md); border-radius: 16px; }
@@ -286,6 +298,14 @@ section[id], div[id], h1[id], h2[id], article[id] { scroll-margin-top: calc(var(
 }
 .mobile-tab svg { width: 21px; height: 21px; flex-shrink: 0; }
 .mobile-tab span { font-size: 10.5px; line-height: 1; letter-spacing: 0.01em; }
+
+/* Shared filter/action chips (used by dashboards, search, home) */
+.disc-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.dchip { display: inline-flex; align-items: center; padding: 8px 15px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); transition: background 0.2s, color 0.2s, border-color 0.2s; text-decoration: none; cursor: pointer; }
+.dchip:hover { color: #fff; background: rgba(255,255,255,0.09); }
+.dchip.on { background: #f2f0eb; color: #101016; border-color: #f2f0eb; }
+.dchip:hover { color: #fff; background: rgba(255,255,255,0.09); }
+.dchip.on { background: #f2f0eb; color: #101016; border-color: #f2f0eb; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .reveal { opacity: 1; transform: none; }

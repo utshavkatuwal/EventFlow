@@ -105,8 +105,20 @@ export function getHeroAmbient(seed = 0) {
   return HERO_AMBIENT[seed % HERO_AMBIENT.length];
 }
 
+import { API_BASE } from '../services/api.js';
+
+export function backendOrigin() {
+  return (API_BASE || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '');
+}
+
+export function resolveMediaUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('/uploads/')) return backendOrigin() + url;
+  return url;
+}
+
 export function getEventImageUrl(event) {
-  if (event?.cover_image_url) return event.cover_image_url;
+  if (event?.cover_image_url) return resolveMediaUrl(event.cover_image_url);
   return getCategoryImage(event?.category_name, event?.title);
 }
 

@@ -15,25 +15,30 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
   const [searchQuery, setSearchQuery] = useState('');
+  const [city, setCity] = useState('');
+  const [price, setPrice] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [evData, catData] = await Promise.all([apiFetch('/events?per_page=48').catch(() => null), apiFetch('/categories').catch(() => null)]);
-        if (evData) setEvents(evData.items || evData.data || []);
-        if (catData) setCategories(catData.items || catData.data || []);
-      } catch (e) { console.error(e); } finally { setLoading(false); }
-    }
-    load();
+    apiFetch('/categories').then((d) => setCategories(d.items || d.data || [])).catch(() => null);
   }, []);
 
-  const filtered = events.filter((ev) => {
-    const mc = !categoryFilter || String(ev.category_id) === String(categoryFilter);
-    const q = searchQuery.toLowerCase();
-    const ms = !q || ev.title?.toLowerCase().includes(q) || (ev.city || '').toLowerCase().includes(q) || (ev.category_name || '').toLowerCase().includes(q);
-    return mc && ms;
-  });
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const p = new URLSearchParams({ per_page: 48 });
+        if (categoryFilter) p.set('category_id', categoryFilter);
+        if (searchQuery.trim()) p.set('q', searchQuery.trim());
+        if (city.trim()) p.set('city', city.trim());
+        if (price) p.set('price', price);
+        if (dateFrom) p.set('date_from', new Date(dateFrom).toISOString());
+        const evData = await apiFetch(`/events?${p.toString()}`).catch(() => null);
+        if (evData) setEvents(evData.items || evData.data || []);
+      } catch (e) { console.error(e); } finally { setLoading(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [categoryFilter, searchQuery, city, price, dateFrom]);
 
   return (
     <>
@@ -45,7 +50,7 @@ export default function EventsPage() {
             <div>
               <p className="kicker">Explore</p>
               <h1>All events</h1>
-              <p className="ev-sub">{loading ? 'Loading…' : `${filtered.length} experience${filtered.length !== 1 ? 's' : ''} across Nepal`}</p>
+              <p className="ev-sub">{loading ? 'Loading…' : `${events.length} experience${events.length !== 1 ? 's' : ''} across Nepal`}</p>
             </div>
             <label className="ev-search glass-tert">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
@@ -61,17 +66,39 @@ export default function EventsPage() {
             {categories.map((cat) => (
               <button key={cat.id} className={`fchip ${String(categoryFilter) === String(cat.id) ? 'on' : ''}`} onClick={() => setCategoryFilter(String(categoryFilter) === String(cat.id) ? '' : cat.id)}>{cat.name}</button>
             ))}
-            <span className="f-count">{filtered.length} results</span>
+            <span className="f-count">{events.length} results</span>
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <div className="ev-filters glass-secondary" style={{ marginTop: 10 }}>
+            <input
+              value={city} onChange={(e) => setCity(e.target.value)} placeholder="City"
+              aria-label="Filter by city"
+              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 14px', color: '#fff', fontSize: '0.82rem', outline: 'none' }}
+            />
+            <input
+              type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="From date"
+              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 14px', color: '#fff', fontSize: '0.82rem', colorScheme: 'dark' }}
+            />
+            {['', 'free', 'paid'].map((v) => (
+              <button key={v || 'any'} className={`fchip ${price === v ? 'on' : ''}`} onClick={() => setPrice(v)}>
+                {v || 'Any price'}
+              </button>
+            ))}
+            {(city || price || dateFrom) && (
+              <button className="fchip" onClick={() => { setCity(''); setPrice(''); setDateFrom(''); }}>Clear</button>
+            )}
           </div>
         </Reveal>
 
         {loading && <div className="ev-grid">{[0,1,2,3,4,5].map(i => <div key={i} className="skel glass-secondary" />)}</div>}
-        {!loading && filtered.length === 0 && (
+        {!loading && events.length === 0 && (
           <div className="empty-glass glass-secondary"><h3>Nothing found</h3><p>Try a different search or category.</p></div>
         )}
-        {!loading && filtered.length > 0 && (
+        {!loading && events.length > 0 && (
           <div className="ev-grid">
-            {filtered.map((ev, i) => (
+            {events.map((ev, i) => (
               <Reveal key={ev.id} delay={Math.min(i * 40, 320)}><EventCard event={ev} /></Reveal>
             ))}
           </div>

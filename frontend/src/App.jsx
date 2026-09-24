@@ -7,6 +7,8 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Loading from './components/Loading.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
+import RoleHome from './components/RoleHome.jsx';
+import { MobileTabbar } from './components/Layout.jsx';
 
 // Lazy loaded pages
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -23,6 +25,7 @@ const PastEventsPage = React.lazy(() => import('./pages/PastEventsPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const ProfileEditPage = React.lazy(() => import('./pages/ProfileEditPage'));
 const TicketDetailPage = React.lazy(() => import('./pages/TicketDetailPage'));
+const PaymentCallbackPage = React.lazy(() => import('./pages/PaymentCallbackPage'));
 const CreateEventPage = React.lazy(() => import('./pages/CreateEventPage'));
 const NotificationsPage = React.lazy(() => import('./pages/NotificationsPage'));
 const CheckInPage = React.lazy(() => import('./pages/CheckInPage'));
@@ -38,6 +41,7 @@ const AdminEventsPage = React.lazy(() => import('./pages/AdminEventsPage'));
 const AdminUsersPage = React.lazy(() => import('./pages/AdminUsersPage'));
 const AdminOrganizersPage = React.lazy(() => import('./pages/AdminOrganizersPage'));
 const AdminReportsPage = React.lazy(() => import('./pages/AdminReportsPage'));
+const AdminWithdrawalsPage = React.lazy(() => import('./pages/AdminWithdrawalsPage'));
 const AdminAuditLogsPage = React.lazy(() => import('./pages/AdminAuditLogsPage'));
 const AdminCategoriesPage = React.lazy(() => import('./pages/AdminCategoriesPage'));
 
@@ -51,10 +55,12 @@ function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/payments/callback" element={<PaymentCallbackPage />} />
         <Route path="/search" element={<EventSearchPage />} />
         <Route path="/categories/:id" element={<CategoryEventsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/dashboard" element={<RoleHome />} />
 
         <Route
           path="/user/dashboard"
@@ -71,6 +77,14 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <TicketDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/user/tickets"
+          element={
+            <RequireAuth>
+              <MyTicketsPage />
             </RequireAuth>
           }
         />
@@ -135,7 +149,7 @@ function AppRoutes() {
           path="/organizer/dashboard"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerDashboardPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -145,7 +159,7 @@ function AppRoutes() {
           path="/organizer/create-event"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <CreateEventPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -155,7 +169,7 @@ function AppRoutes() {
           path="/organizer/my-events"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerMyEventsPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -165,7 +179,7 @@ function AppRoutes() {
           path="/organizer/registrations"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerRegistrationsPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -175,7 +189,7 @@ function AppRoutes() {
           path="/organizer/analytics"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerAnalyticsPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -185,7 +199,7 @@ function AppRoutes() {
           path="/organizer/profile"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <OrganizerProfilePage />
               </ProtectedRoute>
             </RequireAuth>
@@ -195,7 +209,7 @@ function AppRoutes() {
           path="/organizer/checkin"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <CheckInPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -205,7 +219,7 @@ function AppRoutes() {
           path="/organizer/notifications"
           element={
             <RequireAuth>
-              <ProtectedRoute allowedRoles={['organizer', 'admin']}>
+              <ProtectedRoute allowedRoles={['organizer']}>
                 <NotificationsPage />
               </ProtectedRoute>
             </RequireAuth>
@@ -263,6 +277,16 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/admin/withdrawals"
+          element={
+            <RequireAuth>
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminWithdrawalsPage />
+              </ProtectedRoute>
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/admin/audit-logs"
           element={
             <RequireAuth>
@@ -305,6 +329,7 @@ export default function App() {
     <NavProvider>
       <ScrollToTop />
       <AppRoutes />
+      <MobileTabbar />
     </NavProvider>
   );
 }
