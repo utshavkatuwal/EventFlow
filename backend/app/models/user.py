@@ -14,6 +14,8 @@ class User(Base):
     last_name = Column(String(100), nullable=True)
     phone = Column(String(20), nullable=True)
     avatar_url = Column(String(500), nullable=True)
+    # USER | ORGANIZER | ADMIN (Phase 1: role-based auth)
+    account_type = Column(String(20), nullable=False, default="USER", server_default="USER", index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     is_email_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)

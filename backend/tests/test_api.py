@@ -54,11 +54,13 @@ def test_events_stats():
 
 def test_register_user():
     """Test user registration"""
+    import uuid
     from app.main import app
     client = TestClient(app)
+    uid = uuid.uuid4().hex[:8]
     payload = {
-        "email": "test_register@test.com",
-        "username": "test_reg_user",
+        "email": f"test_register_{uid}@test.com",
+        "username": f"test_reg_{uid}",
         "password": "testpass123",
         "first_name": "Test",
         "last_name": "User",
@@ -72,18 +74,20 @@ def test_register_user():
 
 def test_login_success():
     """Test successful login"""
+    import uuid
     from app.main import app
     client = TestClient(app)
+    uid = uuid.uuid4().hex[:8]
     # First register
     reg_payload = {
-        "email": "login_test@test.com",
-        "username": "login_test",
+        "email": f"login_test_{uid}@test.com",
+        "username": f"login_test_{uid}",
         "password": "testpass123",
     }
     client.post("/api/v1/auth/register", json=reg_payload)
     
     # Then login
-    login_payload = {"email": "login_test@test.com", "password": "testpass123"}
+    login_payload = {"email": f"login_test_{uid}@test.com", "password": "testpass123"}
     response = client.post("/api/v1/auth/login", json=login_payload)
     assert response.status_code == 200
     data = response.json()
@@ -104,11 +108,13 @@ def test_login_invalid_credentials():
 
 def test_duplicate_registration():
     """Test that duplicate email registration fails"""
+    import uuid
     from app.main import app
     client = TestClient(app)
+    uid = uuid.uuid4().hex[:8]
     payload = {
-        "email": "dup_test@test.com",
-        "username": "dup_test",
+        "email": f"dup_test_{uid}@test.com",
+        "username": f"dup_test_{uid}",
         "password": "testpass123",
     }
     client.post("/api/v1/auth/register", json=payload)
@@ -120,5 +126,5 @@ def test_requires_auth_for_protected_routes():
     """Test that protected routes return 401 without token"""
     from app.main import app
     client = TestClient(app)
-    response = client.get("/api/v1/users/me")
+    response = client.get("/api/v1/auth/me")
     assert response.status_code == 401

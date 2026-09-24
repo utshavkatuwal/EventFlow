@@ -16,7 +16,9 @@ class TestEventCreation:
 
     def test_create_event_with_auth(self, client):
         # Register and login
-        email = f"organizer_test_{id}@test.com"
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        email = f"organizer_test_{uid}@test.com"
         client.post("/api/v1/auth/register", json={
             "email": email, "username": email, "password": "Test123456",
         })

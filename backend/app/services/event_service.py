@@ -45,6 +45,9 @@ def seed_database():
 
 
 def _seed_users(db):
+    from app.models.user import Role, UserRole
+    from app.models.verification import OrganizerApplication, VerificationStatus
+
     admin = User(
         email="admin@eventflow.dev",
         username="admin",
@@ -53,6 +56,7 @@ def _seed_users(db):
         last_name="EventFlow",
         is_active=True,
         is_email_verified=True,
+        account_type="ADMIN",
     )
     organizer = User(
         email="organizer@eventflow.dev",
@@ -62,6 +66,7 @@ def _seed_users(db):
         last_name="Events",
         is_active=True,
         is_email_verified=True,
+        account_type="ORGANIZER",
     )
     user1 = User(
         email="user1@test.com",
@@ -71,6 +76,7 @@ def _seed_users(db):
         last_name="User One",
         is_active=True,
         is_email_verified=True,
+        account_type="USER",
     )
     user2 = User(
         email="user2@test.com",
@@ -80,9 +86,27 @@ def _seed_users(db):
         last_name="User Two",
         is_active=True,
         is_email_verified=True,
+        account_type="USER",
     )
 
     db.add_all([admin, organizer, user1, user2])
+    db.flush()
+
+    # ensure roles + assignments
+    role_map = {}
+    for name in ("admin", "organizer", "user"):
+        r = db.query(Role).filter(Role.name == name).first()
+        if not r:
+            r = Role(name=name, description=f"{name} role")
+            db.add(r)
+            db.flush()
+        role_map[name] = r
+    db.add_all([
+        UserRole(user_id=admin.id, role_id=role_map["admin"].id),
+        UserRole(user_id=organizer.id, role_id=role_map["organizer"].id),
+        UserRole(user_id=user1.id, role_id=role_map["user"].id),
+        UserRole(user_id=user2.id, role_id=role_map["user"].id),
+    ])
     db.flush()
 
     org = OrganizerProfile(
@@ -91,8 +115,18 @@ def _seed_users(db):
         description="Professional event management company based in Kathmandu, Nepal.",
         city="Kathmandu",
         is_verified=True,
+        verification_status="APPROVED",
     )
     db.add(org)
+    db.flush()
+    db.add(
+        OrganizerApplication(
+            user_id=organizer.id,
+            organization_name="Kathmandu Events Pvt. Ltd.",
+            description="Professional event management company based in Kathmandu, Nepal.",
+            verification_status=VerificationStatus.APPROVED,
+        )
+    )
     db.flush()
 
     print(f"Seeded users: admin (id={admin.id}), organizer (id={organizer.id}), user1 (id={user1.id}), user2 (id={user2.id})")

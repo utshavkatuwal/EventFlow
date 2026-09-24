@@ -12,7 +12,9 @@ def client():
 class TestRegistration:
     def test_create_registration(self, client):
         # Register and login first
-        email = f"reg_{id}_test@test.com"
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        email = f"reg_{uid}_test@test.com"
         client.post("/api/v1/auth/register", json={
             "email": email, "username": email, "password": "Test123456",
         })

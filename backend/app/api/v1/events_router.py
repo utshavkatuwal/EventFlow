@@ -1,401 +1,423 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+"""Events domain — Phase 3 (discovery + lifecycle + approved-organizer CRUD).
+
+Public discovery NEVER returns ended/cancelled events (lifecycle computed in
+`app.services.lifecycle`, never stored, never deleted).
+Management (create/edit/publish/cancel) requires an APPROVED organizer and
+ownership (or admin). DELETE is a soft-cancel to preserve history + ledger.
+"""
+from __future__ import annotations
+
+import uuid
+from datetime import datetime, timedelta
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from app.database import get_db
-from app.models.user import User as UserModel, UserRole
-from app.models.event import Event, EventCategory, EventStatus
-from app.models.ticket import Registration, Ticket, TicketType
-from app.models.other import EventReview, Favorite, Notification
-from app.models.organizer import OrganizerProfile
-from app.services.public_service import get_event_stats
-from app.services.auth_service import register_user, check_in_ticket
-from app.services.analytics_service import get_admin_stats, get_dashboard_stats_organizer
-from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
-from app.core.config import settings
-from app.schemas import (
-    UserCreate, UserLogin, TokenPair, UserResponse, UserUpdate,
-    EventCreate, EventUpdate, EventResponse,
-    CategoryResponse, CategoryCreate,
-    RegistrationRequest, RegistrationResponse,
-    TicketResponse, TicketTypeResponse,
-    ReviewCreate, ReviewResponse,
-    NotificationResponse,
-    ResponseModel, PaginationParams, PaginationResult,
+
+from app.auth.dependencies import (
+    require_admin,
+    require_approved_organizer,
+    require_auth,
+    require_organizer_profile,
 )
-from sqlalchemy import func, and_, desc
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.database import get_db
+from app.models.event import Event, EventCategory
+from app.models.organizer import OrganizerProfile
+from app.models.other import AuditLog, Favorite
+from app.models.ticket import Registration, TicketType
+from app.models.user import User as UserModel
+from app.services.analytics_service import get_admin_stats, get_dashboard_stats_organizer
+from app.services.auth_service import check_in_ticket, register_user
+from app.services.lifecycle import (
+    PUBLIC_STATUSES,
+    compute_lifecycle,
+    effective_end,
+    serialize_event,
+)
+from app.services.public_service import get_event_stats
 
 api_router = APIRouter()
 
 
-def get_current_user(
-    token: Optional[str] = None,
-    db: Session = Depends(get_db),
-):
-    if not token:
-        return None
-    payload = verify_token(token, "access")
-    if not payload:
-        return None
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-    return db.query(UserModel).filter(UserModel.id == int(user_id)).first()
+# ---------- shared query helpers ----------
+def _public_base(db: Session):
+    """Workflow-state filter for public discovery (lifecycle applied in Python)."""
+    return db.query(Event).filter(Event.status.in_(list(PUBLIC_STATUSES)))
 
 
-def get_current_active_user(
-    token: Optional[str] = None,
-    db: Session = Depends(get_db),
-):
-    user = get_current_user(token, db)
-    if not user or not user.is_active:
-        return None
-    return user
+def _ended_clause(now: datetime):
+    """SQL predicate matching compute_lifecycle() == ENDED (DB-agnostic)."""
+    return or_(
+        and_(Event.end_date.isnot(None), Event.end_date <= now),
+        and_(Event.end_date.is_(None), Event.start_date <= now - timedelta(hours=4)),
+    )
 
 
-# Root
+def _apply_discovery_filters(query, *, category_id=None, q=None, city=None,
+                             date_from=None, date_to=None, price=None, featured=None,
+                             include_ended=False):
+    if category_id:
+        query = query.filter(Event.category_id == category_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Event.title.ilike(like),
+                Event.short_description.ilike(like),
+                Event.venue.ilike(like),
+                Event.city.ilike(like),
+            )
+        )
+    if city:
+        query = query.filter(Event.city.ilike(f"%{city}%"))
+    if date_from:
+        query = query.filter(or_(Event.end_date >= date_from, Event.start_date >= date_from))
+    if date_to:
+        query = query.filter(Event.start_date <= date_to)
+    if price == "free":
+        query = query.filter((Event.price_min.is_(None)) | (Event.price_min <= 0))
+    elif price == "paid":
+        query = query.filter(Event.price_min > 0)
+    if featured is not None:
+        query = query.filter(Event.is_featured.is_(featured))
+    if not include_ended:
+        query = query.filter(~_ended_clause(datetime.utcnow()))
+    return query
+
+
+def _paginate_with_lifecycle(query, db: Session, *, page: int, per_page: int, sort: str):
+    """Sort popular in SQL, paginate with a buffer, finalize lifecycle in Python."""
+    if sort == "newest":
+        query = query.order_by(Event.created_at.desc())
+    elif sort == "popular":
+        counts = (
+            db.query(Registration.event_id, func.count(Registration.id).label("c"))
+            .filter(Registration.status == "CONFIRMED")
+            .group_by(Registration.event_id)
+            .subquery()
+        )
+        query = query.outerjoin(counts, counts.c.event_id == Event.id).order_by(
+            desc(func.coalesce(counts.c.c, 0)), Event.start_date.asc()
+        )
+    else:
+        query = query.order_by(Event.start_date.asc())
+    # Buffer over-fetch so lifecycle filtering keeps pages full at small scale.
+    raw = query.offset(max(page - 1, 0) * per_page).limit(per_page * 3).all()
+    items = [serialize_event(ev, db) for ev in raw]
+    # Defensive: drop anything that slipped through (cancelled/ended).
+    items = [i for i in items if i["lifecycle"] != "ENDED" and i["status"] != "CANCELLED"]
+    return items[:per_page]
+
+
+# ---------- root / health (legacy paths kept) ----------
 @api_router.get("/", tags=["Root"])
 def root():
-    return ResponseModel(success=True, message="EventFlow API v1")
+    return {"success": True, "message": "EventFlow API v1"}
 
 
-# Health
 @api_router.get("/health", tags=["Health"])
 def health():
     return {"status": "healthy"}
 
 
-# Categories
-@api_router.get("/categories", tags=["Categories"], response_model=dict)
-def list_categories(db: Session = Depends(get_db)):
-    cats = db.query(EventCategory).all()
-    return {"success": True, "items": [
-        {"id": c.id, "name": c.name, "slug": c.slug, "description": c.description, "icon": c.icon, "created_at": c.created_at}
-        for c in cats
-    ], "message": "Categories retrieved successfully"}
-
-
-# Events (Public)
+# ---------- public discovery ----------
 @api_router.get("/events", tags=["Events"])
 def list_events(
     page: int = 1,
     per_page: int = 20,
     category_id: Optional[int] = None,
-    status: Optional[str] = None,
-    search: Optional[str] = None,
+    q: Optional[str] = Query(default=None, description="Keyword across title/desc/venue/city"),
+    search: Optional[str] = None,  # legacy alias
+    city: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    price: Optional[str] = Query(default=None, description="free | paid"),
+    featured: Optional[bool] = None,
     sort: str = "start_date",
+    include_ended: bool = False,
     db: Session = Depends(get_db),
 ):
-    query = db.query(Event).join(OrganizerProfile, Event.organizer_id == OrganizerProfile.id).outerjoin(EventCategory)
-    
-    if category_id:
-        query = query.filter(Event.category_id == category_id)
-    if status:
-        query = query.filter(Event.status == status)
-    if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            Event.title.ilike(search_term) |
-            Event.short_description.ilike(search_term) |
-            Event.venue.ilike(search_term) |
-            Event.city.ilike(search_term)
-        )
-    
-    query = query.filter(Event.status.in_(["APPROVED", "PUBLISHED"]))
-    
-    if sort == "start_date":
-        query = query.order_by(Event.start_date.asc())
-    elif sort == "newest":
-        query = query.order_by(Event.created_at.desc())
-    elif sort == "popular":
-        query = query.order_by(desc(func.count(Registration.id)))
-    
+    keyword = q or search
+    query = _apply_discovery_filters(
+        _public_base(db),
+        category_id=category_id, q=keyword, city=city,
+        date_from=date_from, date_to=date_to, price=price,
+        featured=featured, include_ended=include_ended,
+    )
     total = query.count()
-    offset = (page - 1) * per_page
-    items = query.offset(offset).limit(per_page).all()
-    
-    organizer_profiles = db.query(OrganizerProfile).all()
-    org_map = {op.user_id: op.organization_name for op in organizer_profiles}
-    
-    result_items = []
-    for ev in items:
-        organizer = db.query(OrganizerProfile).filter(OrganizerProfile.id == ev.organizer_id).first()
-        category = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-        reg_count = db.query(func.count(Registration.id)).filter(Registration.event_id == ev.id, Registration.status == "CONFIRMED").scalar() or 0
-        result_items.append({
-            "id": ev.id,
-            "organizer_id": ev.organizer_id,
-            "category_id": ev.category_id,
-            "title": ev.title,
-            "slug": ev.slug,
-            "short_description": ev.short_description,
-            "cover_image_url": ev.cover_image_url,
-            "venue": ev.venue,
-            "address": ev.address,
-            "city": ev.city,
-            "country": ev.country,
-            "start_date": ev.start_date,
-            "end_date": ev.end_date,
-            "max_capacity": ev.max_capacity,
-            "status": ev.status,
-            "is_featured": ev.is_featured,
-            "price_min": ev.price_min,
-            "organizer_name": organizer.organization_name if organizer else None,
-            "category_name": category.name if category else None,
-            "total_registrations": reg_count,
-            "available_capacity": ev.max_capacity - reg_count,
-            "created_at": ev.created_at,
-            "updated_at": ev.updated_at,
-        })
-    
+    items = _paginate_with_lifecycle(query, db, page=page, per_page=per_page, sort=sort)
     return {
-        "success": True,
-        "items": result_items,
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-        "total_pages": (total + per_page - 1) // per_page,
-        "message": "Events retrieved successfully"
+        "success": True, "items": items, "total": total, "page": page,
+        "per_page": per_page, "total_pages": (total + per_page - 1) // per_page,
+        "message": "Events retrieved successfully",
     }
 
 
-# Event Stats (for homepage)
+@api_router.get("/events/featured", tags=["Events"])
+def featured_events(per_page: int = 6, db: Session = Depends(get_db)):
+    query = _apply_discovery_filters(_public_base(db), featured=True)
+    return {"success": True, "items": _paginate_with_lifecycle(query, db, page=1, per_page=per_page, sort="start_date")}
+
+
+@api_router.get("/events/upcoming", tags=["Events"])
+def upcoming_events(per_page: int = 20, page: int = 1, db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    query = _public_base(db).filter(Event.start_date > now)
+    query = _apply_discovery_filters(query)
+    return {"success": True, "items": _paginate_with_lifecycle(query, db, page=page, per_page=per_page, sort="start_date")}
+
+
+@api_router.get("/events/popular", tags=["Events"])
+def popular_events(per_page: int = 10, db: Session = Depends(get_db)):
+    query = _apply_discovery_filters(_public_base(db))
+    return {"success": True, "items": _paginate_with_lifecycle(query, db, page=1, per_page=per_page, sort="popular")}
+
+
 @api_router.get("/events/stats", tags=["Events"])
 def event_stats(db: Session = Depends(get_db)):
-    stats = get_event_stats(db)
-    return {"success": True, "data": stats, "message": "Stats retrieved"}
+    return {"success": True, "data": get_event_stats(db), "message": "Stats retrieved"}
 
 
-# Event Detail
-@api_router.get("/events/{event_id}", tags=["Events"], response_model=dict)
+@api_router.get("/events/{event_id}", tags=["Events"])
 def get_event(event_id: int, db: Session = Depends(get_db)):
     ev = db.query(Event).filter(Event.id == event_id).first()
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
-    
-    organizer = db.query(OrganizerProfile).filter(OrganizerProfile.id == ev.organizer_id).first()
-    category = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-    reg_count = db.query(func.count(Registration.id)).filter(Registration.event_id == ev.id, Registration.status == "CONFIRMED").scalar() or 0
-    
-    ticket_types = db.query(TicketType).filter(TicketType.event_id == event_id).all()
-    
-    return {
-        "success": True,
-        "data": {
-            "id": ev.id,
-            "organizer_id": ev.organizer_id,
-            "category_id": ev.category_id,
-            "title": ev.title,
-            "slug": ev.slug,
-            "short_description": ev.short_description,
-            "full_description": ev.full_description,
-            "cover_image_url": ev.cover_image_url,
-            "venue": ev.venue,
-            "address": ev.address,
-            "city": ev.city,
-            "country": ev.country,
-            "start_date": ev.start_date,
-            "end_date": ev.end_date,
-            "max_capacity": ev.max_capacity,
-            "status": ev.status,
-            "is_featured": ev.is_featured,
-            "price_min": ev.price_min,
-            "organizer_name": organizer.organization_name if organizer else None,
-            "category_name": category.name if category else None,
-            "total_registrations": reg_count,
-            "available_capacity": ev.max_capacity - reg_count,
-            "ticket_types": [{"id": tt.id, "name": tt.name, "price": tt.price, "capacity": tt.capacity, "sold_count": tt.sold_count, "status": tt.status} for tt in ticket_types],
-            "created_at": ev.created_at,
-            "updated_at": ev.updated_at,
-        },
-        "message": "Event retrieved successfully"
-    }
+    return {"success": True, "data": serialize_event(ev, db, include_ticket_types=True), "message": "Event retrieved successfully"}
 
 
-# Event Tickets
 @api_router.get("/events/{event_id}/tickets", tags=["Events"])
 def get_event_tickets(event_id: int, db: Session = Depends(get_db)):
+    if not db.query(Event).filter(Event.id == event_id).first():
+        raise HTTPException(status_code=404, detail="Event not found")
     tickets = db.query(TicketType).filter(TicketType.event_id == event_id).all()
     return {"success": True, "items": [
-        {"id": t.id, "event_id": t.event_id, "name": t.name, "description": t.description, "price": t.price, "currency": t.currency, "capacity": t.capacity, "sold_count": t.sold_count, "status": t.status, "created_at": t.created_at, "updated_at": t.updated_at}
-        for t in tickets
-    ], "message": "Tickets retrieved"}
+        {"id": t.id, "event_id": t.event_id, "name": t.name, "description": t.description,
+         "price": t.price, "currency": t.currency, "capacity": t.capacity,
+         "sold_count": t.sold_count, "status": str(getattr(t.status, "value", t.status)),
+         "created_at": t.created_at, "updated_at": t.updated_at}
+        for t in tickets], "message": "Tickets retrieved"}
 
 
-# Auth: Register
-@api_router.post("/auth/register", tags=["Auth"], response_model=dict)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(UserModel).filter(UserModel.email == user_data.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    new_user = UserModel(
-        email=user_data.email,
-        username=user_data.username,
-        password_hash=hash_password(user_data.password),
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        phone=user_data.phone,
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"success": True, "message": "User registered successfully", "data": {"user_id": new_user.id}}
+# ---------- organizer media upload (covers + videos, validated) ----------
+MEDIA_RULES = {
+    "cover": ({"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"},
+              {".jpg", ".jpeg", ".png", ".webp"}, 10 * 1024 * 1024),
+    "video": ({"video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov"},
+              {".mp4", ".webm", ".mov"}, 100 * 1024 * 1024),
+}
 
 
-# Auth: Login
-@api_router.post("/auth/login", tags=["Auth"], response_model=TokenPair)
-def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.email == credentials.email).first()
-    if not user or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is deactivated")
-    
-    role = "user"
-    user_roles = db.query(UserRole).filter(UserRole.user_id == user.id).all()
-    if user_roles:
-        role_obj = db.query(db.query(UserModel).join(UserRole).filter(UserRole.user_id == user.id).first())
-    
-    access_token = create_access_token({"sub": str(user.id), "role": role})
-    refresh_token = create_refresh_token({"sub": str(user.id)})
-    return TokenPair(access_token=access_token, refresh_token=refresh_token)
+@api_router.post("/events/upload", tags=["Events"])
+async def upload_event_media(
+    file: UploadFile = File(...),
+    kind: str = Query(default="cover", description="cover | video"),
+    org: OrganizerProfile = Depends(require_organizer_profile),
+    db: Session = Depends(get_db),
+):
+    from pathlib import Path
+
+    if kind not in MEDIA_RULES:
+        raise HTTPException(status_code=400, detail="kind must be cover or video")
+    allowed_mime, allowed_ext, max_bytes = MEDIA_RULES[kind]
+    ctype = (file.content_type or "").lower()
+    if ctype not in allowed_mime:
+        raise HTTPException(status_code=400, detail=f"Only {', '.join(sorted(allowed_ext))} allowed for {kind}")
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in allowed_ext:
+        raise HTTPException(status_code=400, detail="File type not allowed")
+    blob = await file.read()
+    if not blob or len(blob) > max_bytes:
+        raise HTTPException(status_code=400, detail="Empty file or too large")
+    dest = Path("uploads/events")
+    dest.mkdir(parents=True, exist_ok=True)
+    stored = f"{org.id}_{uuid.uuid4().hex}{allowed_mime[ctype]}"
+    (dest / stored).write_bytes(blob)
+    return {"success": True, "message": f"{kind} uploaded",
+            "data": {"url": f"/uploads/events/{stored}", "kind": kind, "file_size": len(blob)}}
 
 
-# Auth: Me
-@api_router.get("/users/me", tags=["Users"])
-def get_me(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return {
-        "success": True,
-        "data": {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "phone": user.phone,
-            "avatar_url": user.avatar_url,
-            "is_active": user.is_active,
-            "is_email_verified": user.is_email_verified,
-            "role": "user",
-            "created_at": user.created_at,
-            "updated_at": user.updated_at,
-        },
-        "message": "User info retrieved"
-    }
+# ---------- organizer management (APPROVED only) ----------
+def _own_event_or_403(event_id: int, org: OrganizerProfile, db: Session) -> Event:
+    ev = db.query(Event).filter(Event.id == event_id).first()
+    if not ev:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if ev.organizer_id != org.id:
+        raise HTTPException(status_code=403, detail="Not your event")
+    return ev
 
 
-# Registration
-@api_router.post("/registrations", tags=["Registrations"], response_model=dict)
-def create_registration(req: RegistrationRequest, token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
+def _parse_dt(value):
+    if value is None or isinstance(value, datetime):
+        return value
     try:
-        registration, ticket = register_user(req.event_id, user.id, req.ticket_type_id, db)
-        return {
-            "success": True,
-            "message": "Registration successful",
-            "data": {
-                "registration_id": registration.id,
-                "ticket_id": ticket.id,
-                "ticket_code": ticket.ticket_code,
-                "qr_token": ticket.qr_token,
-            }
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid datetime format (use ISO 8601)")
 
 
-# Check-in
-@api_router.post("/checkins/verify", tags=["Check-in"])
-def verify_checkin(data: dict, db: Session = Depends(get_db)):
-    qr_token = data.get("qr_token")
-    scanned_by = data.get("scanned_by_user_id")
-    if not qr_token:
-        raise HTTPException(status_code=400, detail="QR token required")
-    
-    result = check_in_ticket(qr_token, scanned_by or 0, db)
-    if result["valid"]:
-        return {"success": True, "message": result["message"], "data": result["ticket"]}
+def _validate_event_payload(data: dict, db: Session, partial: bool = False):
+    title = data.get("title")
+    if not partial and not (title or "").strip():
+        raise HTTPException(status_code=400, detail="Title is required")
+    if "category_id" in data and data["category_id"] is not None:
+        if not db.query(EventCategory).filter(EventCategory.id == data["category_id"]).first():
+            raise HTTPException(status_code=400, detail="Invalid category_id")
+    start, end = _parse_dt(data.get("start_date")), _parse_dt(data.get("end_date"))
+    if not partial and start is None:
+        raise HTTPException(status_code=400, detail="start_date is required")
+    if start and end and end <= start:
+        raise HTTPException(status_code=400, detail="end_date must be after start_date")
+    if data.get("max_capacity") is not None and int(data["max_capacity"]) < 1:
+        raise HTTPException(status_code=400, detail="max_capacity must be >= 1")
+    if data.get("price_min") is not None and float(data["price_min"]) < 0:
+        raise HTTPException(status_code=400, detail="price_min cannot be negative")
+    cover = data.get("cover_image_url")
+    if cover:
+        if not isinstance(cover, str) or len(cover) > 500 or not (
+                cover.startswith(("http://", "https://", "/uploads/"))):
+            raise HTTPException(status_code=400, detail="cover_image_url must be an http(s) URL or uploaded file path")
+    video = data.get("video_url")
+    if video:
+        if not isinstance(video, str) or len(video) > 500 or not (
+                video.startswith(("http://", "https://", "/uploads/"))):
+            raise HTTPException(status_code=400, detail="video_url must be an http(s) URL or uploaded file path")
+    types = data.get("ticket_types")
+    if types is not None:
+        if not isinstance(types, list) or not types or len(types) > 10:
+            raise HTTPException(status_code=400, detail="ticket_types must be 1–10 entries")
+        seen = set()
+        for t in types:
+            name = (t.get("name") or "").strip() if isinstance(t, dict) else ""
+            if not name or name.lower() in seen:
+                raise HTTPException(status_code=400, detail="Each ticket type needs a unique name")
+            seen.add(name.lower())
+            try:
+                price, cap = float(t.get("price", 0)), int(t.get("capacity", 0))
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail=f"Bad price/capacity for '{name}'")
+            if price < 0 or cap < 1:
+                raise HTTPException(status_code=400, detail=f"Bad price/capacity for '{name}'")
+
+
+@api_router.post("/events", tags=["Events"])
+def create_event(event_data: dict, org: OrganizerProfile = Depends(require_organizer_profile), db: Session = Depends(get_db)):
+    """Any organizer (even UNDER_REVIEW) may save drafts. Publishing needs approval."""
+    _validate_event_payload(event_data, db)
+    title = event_data["title"].strip()
+    event = Event(
+        organizer_id=org.id,
+        category_id=event_data.get("category_id"),
+        title=title,
+        slug=title.lower().replace(" ", "-") + "-" + uuid.uuid4().hex[:8],
+        short_description=event_data.get("short_description"),
+        full_description=event_data.get("full_description"),
+        venue=event_data.get("venue"),
+        address=event_data.get("address"),
+        city=event_data.get("city"),
+        start_date=_parse_dt(event_data.get("start_date")),
+        end_date=_parse_dt(event_data.get("end_date")),
+        max_capacity=int(event_data.get("max_capacity", 100)),
+        status="DRAFT",
+        is_featured=False,
+        price_min=float(event_data.get("price_min", 0.0)),
+        cover_image_url=event_data.get("cover_image_url"),
+        video_url=event_data.get("video_url"),
+    )
+    db.add(event)
+    db.flush()
+    custom = event_data.get("ticket_types") or []
+    if custom:
+        for t in custom:
+            db.add(TicketType(
+                event_id=event.id, name=t["name"].strip(),
+                description=t.get("description"),
+                price=float(t.get("price", 0)), currency="NPR",
+                capacity=int(t.get("capacity")), status="ACTIVE",
+            ))
     else:
-        raise HTTPException(status_code=400, detail={"valid": False, "error": result["error"], "message": result["message"]})
+        # Default ticket type so detail pages always have something bookable.
+        db.add(TicketType(
+            event_id=event.id, name="General",
+            price=event.price_min, currency="NPR",
+            capacity=event.max_capacity, status="ACTIVE",
+        ))
+    db.commit()
+    db.refresh(event)
+    return {"success": True, "message": "Event created as draft", "data": serialize_event(event, db)}
 
 
-# User Stats (Dashboard)
-@api_router.get("/user/stats", tags=["Dashboard"])
-def user_stats(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    total_reg = db.query(func.count(Registration.id)).filter(Registration.user_id == user.id, Registration.status == "CONFIRMED").scalar() or 0
-    upcoming = db.query(func.count(Registration.id)).filter(
-        Registration.user_id == user.id,
-        Registration.status == "CONFIRMED",
-        Event.start_date >= func.now()
-    ).join(Event).scalar() or 0
-    
-    fav_count = db.query(func.count(Favorite.id)).filter(Favorite.user_id == user.id).scalar() or 0
-    
-    return {"success": True, "data": {"total_registrations": total_reg, "upcoming": upcoming, "saved": fav_count}}
+@api_router.put("/events/{event_id}", tags=["Events"])
+def update_event(event_id: int, event_data: dict, org: OrganizerProfile = Depends(require_organizer_profile), db: Session = Depends(get_db)):
+    ev = _own_event_or_403(event_id, org, db)
+    if str(getattr(ev.status, "value", ev.status)) == "CANCELLED":
+        raise HTTPException(status_code=400, detail="Cancelled events cannot be edited")
+    _validate_event_payload(event_data, db, partial=True)
+    for field in ["title", "category_id", "short_description", "full_description", "venue",
+                  "address", "city", "max_capacity", "price_min", "cover_image_url", "video_url"]:
+        if field in event_data and event_data[field] is not None:
+            setattr(ev, field, event_data[field])
+    for field in ["start_date", "end_date"]:
+        if field in event_data and event_data[field] is not None:
+            setattr(ev, field, _parse_dt(event_data[field]))
+    db.commit()
+    db.refresh(ev)
+    return {"success": True, "message": "Event updated", "data": serialize_event(ev, db, include_ticket_types=True)}
 
 
-# Organizer Stats
-@api_router.get("/organizer/stats", tags=["Dashboard"])
-def organizer_stats(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
-    if not org:
-        raise HTTPException(status_code=404, detail="Organizer profile not found")
-    
-    stats = get_dashboard_stats_organizer(org.id, db)
-    return {"success": True, "data": stats}
+@api_router.patch("/events/{event_id}/publish", tags=["Events"])
+def publish_event(event_id: int, org: OrganizerProfile = Depends(require_approved_organizer), db: Session = Depends(get_db)):
+    ev = _own_event_or_403(event_id, org, db)
+    status = str(getattr(ev.status, "value", ev.status))
+    if status == "CANCELLED":
+        raise HTTPException(status_code=400, detail="Cancelled events cannot be published")
+    if compute_lifecycle(ev.start_date, ev.end_date) == "ENDED":
+        raise HTTPException(status_code=400, detail="Ended events cannot be published")
+    ev.status = "PUBLISHED"
+    db.commit()
+    return {"success": True, "message": "Event published", "data": serialize_event(ev, db)}
 
 
-# Admin Stats
-@api_router.get("/admin/stats", tags=["Admin"])
-def admin_stats(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    stats = get_admin_stats(db)
-    return {"success": True, "data": stats}
+@api_router.patch("/events/{event_id}/cancel", tags=["Events"])
+def cancel_event(event_id: int, org: OrganizerProfile = Depends(require_organizer_profile), db: Session = Depends(get_db)):
+    ev = _own_event_or_403(event_id, org, db)
+    ev.status = "CANCELLED"
+    # Close ticket sales; existing CONFIRMED registrations stay for refund handling (Phase 5/7).
+    db.query(TicketType).filter(TicketType.event_id == ev.id).update({"status": "INACTIVE"})
+    db.commit()
+    return {"success": True, "message": "Event cancelled. New purchases blocked; existing tickets preserved.", "data": serialize_event(ev, db)}
 
 
-# Simple event list for dashboards (mock with seeded data fallback)
+@api_router.delete("/events/{event_id}", tags=["Events"])
+def delete_event(event_id: int, org: OrganizerProfile = Depends(require_organizer_profile), db: Session = Depends(get_db)):
+    """Soft-delete = cancel. Records are never hard-deleted (history + ledger)."""
+    ev = _own_event_or_403(event_id, org, db)
+    ev.status = "CANCELLED"
+    db.query(TicketType).filter(TicketType.event_id == ev.id).update({"status": "INACTIVE"})
+    db.commit()
+    return {"success": True, "message": "Event cancelled (records preserved)"}
+
+
+# ---------- organizer views (history keeps ended/cancelled) ----------
 @api_router.get("/organizer/events", tags=["Organizer"])
-def organizer_events(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def organizer_events(
+    lifecycle: Optional[str] = None,
+    user: UserModel = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
     org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
     if not org:
         return {"success": True, "items": [], "message": "No organizer profile"}
-    events = db.query(Event).filter(Event.organizer_id == org.id).all()
-    result = []
-    for ev in events:
-        cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-        result.append({
-            "id": ev.id, "title": ev.title, "status": ev.status, "start_date": ev.start_date,
-            "category_name": cat.name if cat else None, "organizer_name": org.organization_name,
-        })
-    return {"success": True, "items": result, "message": "Events retrieved"}
+    events = db.query(Event).filter(Event.organizer_id == org.id).order_by(Event.start_date.desc()).all()
+    items = [serialize_event(ev, db) for ev in events]
+    if lifecycle:
+        items = [i for i in items if i["lifecycle"] == lifecycle.upper()]
+    return {"success": True, "items": items, "message": "Events retrieved"}
 
 
 @api_router.get("/organizer/registrations", tags=["Organizer"])
-def organizer_registrations(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def organizer_registrations(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
     org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
     if not org:
         return {"success": True, "items": []}
@@ -406,43 +428,71 @@ def organizer_registrations(token: Optional[str] = None, db: Session = Depends(g
         tt = db.query(TicketType).filter(TicketType.id == r.ticket_type_id).first()
         u = db.query(UserModel).filter(UserModel.id == r.user_id).first()
         result.append({
-            "id": r.id, "event_title": ev.title if ev else "-", "user_name": u.username if u else "-",
-            "ticket_type_name": tt.name if tt else "-", "registration_date": r.registration_date, "status": r.status,
+            "id": r.id, "event_title": ev.title if ev else "-",
+            "user_name": u.username if u else "-",
+            "ticket_type_name": tt.name if tt else "-",
+            "registration_date": r.registration_date,
+            "status": str(getattr(r.status, "value", r.status)),
         })
     return {"success": True, "items": result, "message": "Registrations retrieved"}
 
 
-@api_router.get("/admin/events", tags=["Admin"])
-def admin_events(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    events = db.query(Event).all()
+@api_router.get("/organizer/stats", tags=["Dashboard"])
+def organizer_stats(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organizer profile not found")
+    return {"success": True, "data": get_dashboard_stats_organizer(org.id, db)}
+
+
+# ---------- user history (lifecycle-aware, tickets stay accessible) ----------
+@api_router.get("/user/upcoming", tags=["User"])
+def user_upcoming(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    regs = db.query(Registration).filter(
+        Registration.user_id == user.id, Registration.status == "CONFIRMED").all()
     result = []
-    for ev in events:
-        org = db.query(OrganizerProfile).filter(OrganizerProfile.id == ev.organizer_id).first()
-        cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-        result.append({
-            "id": ev.id, "title": ev.title, "status": ev.status, "start_date": ev.start_date,
-            "organizer_name": org.organization_name if org else None, "category_name": cat.name if cat else None,
-        })
-    return {"success": True, "items": result, "message": "Events retrieved"}
+    for r in regs:
+        ev = db.query(Event).filter(Event.id == r.event_id).first()
+        if ev and compute_lifecycle(ev.start_date, ev.end_date) == "UPCOMING":
+            result.append(serialize_event(ev, db))
+    return {"success": True, "items": result}
 
 
-# Favorites
-@api_router.post("/favorites", tags=["Favorites"], response_model=dict)
-def add_favorite(data: dict, token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+@api_router.get("/user/past", tags=["User"])
+def user_past(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    regs = db.query(Registration).filter(
+        Registration.user_id == user.id, Registration.status == "CONFIRMED").all()
+    result = []
+    for r in regs:
+        ev = db.query(Event).filter(Event.id == r.event_id).first()
+        if ev and compute_lifecycle(ev.start_date, ev.end_date) == "ENDED":
+            result.append(serialize_event(ev, db))
+    return {"success": True, "items": result}
+
+
+@api_router.get("/user/stats", tags=["Dashboard"])
+def user_stats(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    total = db.query(func.count(Registration.id)).filter(
+        Registration.user_id == user.id, Registration.status == "CONFIRMED").scalar() or 0
+    regs = db.query(Registration).filter(
+        Registration.user_id == user.id, Registration.status == "CONFIRMED").all()
+    upcoming = sum(
+        1 for r in regs
+        if (ev := db.query(Event).filter(Event.id == r.event_id).first())
+        and compute_lifecycle(ev.start_date, ev.end_date) == "UPCOMING"
+    )
+    fav_count = db.query(func.count(Favorite.id)).filter(Favorite.user_id == user.id).scalar() or 0
+    return {"success": True, "data": {"total_registrations": total, "upcoming": upcoming, "saved": fav_count}}
+
+
+# ---------- favorites (fixed auth, same behavior) ----------
+@api_router.post("/favorites", tags=["Favorites"])
+def add_favorite(data: dict, user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
     event_id = data.get("event_id")
     if not event_id:
         raise HTTPException(status_code=400, detail="event_id required")
-    existing = db.query(db.query(UserModel).join(Favorite).filter(Favorite.user_id == user.id, Favorite.event_id == event_id).first())
     try:
-        from app.models.other import Favorite as FavoriteModel
-        fav = FavoriteModel(user_id=user.id, event_id=event_id)
-        db.add(fav)
+        db.add(Favorite(user_id=user.id, event_id=event_id))
         db.commit()
         return {"success": True, "message": "Event saved"}
     except Exception:
@@ -450,13 +500,9 @@ def add_favorite(data: dict, token: Optional[str] = None, db: Session = Depends(
         return {"success": True, "message": "Already saved"}
 
 
-@api_router.delete("/favorites/{event_id}", tags=["Favorites"], response_model=dict)
-def remove_favorite(event_id: int, token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    from app.models.other import Favorite as FavoriteModel
-    fav = db.query(FavoriteModel).filter(FavoriteModel.user_id == user.id, FavoriteModel.event_id == event_id).first()
+@api_router.delete("/favorites/{event_id}", tags=["Favorites"])
+def remove_favorite(event_id: int, user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    fav = db.query(Favorite).filter(Favorite.user_id == user.id, Favorite.event_id == event_id).first()
     if fav:
         db.delete(fav)
         db.commit()
@@ -464,98 +510,77 @@ def remove_favorite(event_id: int, token: Optional[str] = None, db: Session = De
 
 
 @api_router.get("/user/saved", tags=["Favorites"])
-def get_saved(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def get_saved(user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
     favs = db.query(Favorite).filter(Favorite.user_id == user.id).all()
-    event_ids = [f.event_id for f in favs]
-    if not event_ids:
+    ids = [f.event_id for f in favs]
+    if not ids:
         return {"success": True, "items": []}
-    from app.models.event import Event as EventModel
-    from app.models.event_category import EventCategory
-    events = db.query(EventModel).filter(EventModel.id.in_(event_ids)).all()
-    result = []
-    for ev in events:
-        cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-        result.append({
-            "id": ev.id, "title": ev.title, "category_name": cat.name if cat else None,
-            "cover_image_url": ev.cover_image_url, "start_date": ev.start_date, "city": ev.city,
-            "price_min": ev.price_min, "organizer_name": None,
-        })
-    return {"success": True, "items": result, "message": "Saved events retrieved"}
+    return {"success": True, "items": [serialize_event(ev, db) for ev in db.query(Event).filter(Event.id.in_(ids)).all()],
+            "message": "Saved events retrieved"}
 
 
-# User Upcoming/Past events
-@api_router.get("/user/upcoming", tags=["User"])
-def user_upcoming(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    from datetime import datetime
-    regs = db.query(Registration).filter(Registration.user_id == user.id, Registration.status == "CONFIRMED").all()
-    result = []
-    for r in regs:
-        ev = db.query(Event).filter(Event.id == r.event_id).first()
-        if ev and ev.start_date >= datetime.utcnow():
-            cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-            result.append({
-                "id": ev.id, "title": ev.title, "category_name": cat.name if cat else None,
-                "cover_image_url": ev.cover_image_url, "start_date": ev.start_date, "city": ev.city,
-                "price_min": ev.price_min, "organizer_name": None, "status": ev.status,
-            })
-    return {"success": True, "items": result}
+# ---------- registrations (compat path used by EventDetailPage; canonical: /registrations) ----------
+@api_router.post("/registrations", tags=["Registrations"])
+def create_registration(data: dict, user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    from app.services.booking import BookingError, create_booking
+
+    try:
+        out = create_booking(db, user, data.get("event_id"), data.get("ticket_type_id"))
+    except BookingError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    reg = out["registration"]
+    if out["payment_required"]:
+        return {"success": True, "message": "Order created. Complete payment to get your ticket.",
+                "data": {"registration_id": reg.id, "payment_required": True, "amount": out["amount"]}}
+    t = out["ticket"]
+    return {"success": True, "message": "Registration successful",
+            "data": {"registration_id": reg.id, "ticket_id": t.id,
+                     "ticket_code": t.ticket_code, "qr_token": t.qr_token,
+                     "qr_code_url": t.qr_code_url, "payment_required": False}}
 
 
-@api_router.get("/user/past", tags=["User"])
-def user_past(token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    from datetime import datetime
-    regs = db.query(Registration).filter(Registration.user_id == user.id, Registration.status == "CONFIRMED").all()
-    result = []
-    for r in regs:
-        ev = db.query(Event).filter(Event.id == r.event_id).first()
-        if ev and ev.start_date < datetime.utcnow():
-            cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-            result.append({
-                "id": ev.id, "title": ev.title, "category_name": cat.name if cat else None,
-                "cover_image_url": ev.cover_image_url, "start_date": ev.start_date, "city": ev.city,
-                "price_min": ev.price_min, "organizer_name": None, "status": ev.status,
-            })
-    return {"success": True, "items": result}
+@api_router.post("/checkins/verify", tags=["Check-in"])
+def verify_checkin(data: dict, user: UserModel = Depends(require_auth), db: Session = Depends(get_db)):
+    """Compat path (CheckInPage v1). Ownership derived from the ticket's event."""
+    from app.models.organizer import OrganizerProfile
+    from app.models.ticket import Registration as RegModel
+    from app.models.ticket import Ticket as TicketModel
 
-
-# Event Creation (Organizer)
-@api_router.post("/events", tags=["Events"])
-def create_event(event_data: dict, token: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_active_user(token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
+    token = (data.get("qr_token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="QR token required")
+    ticket = db.query(TicketModel).filter(TicketModel.qr_token == token).first()
+    if not ticket:
+        ticket = db.query(TicketModel).filter(TicketModel.ticket_code == token).first()
+    if not ticket:
+        raise HTTPException(status_code=400, detail={"valid": False, "error": "INVALID_TICKET",
+                                                     "message": "This ticket could not be verified."})
+    reg = db.query(RegModel).filter(RegModel.id == ticket.registration_id).first()
+    ev = db.query(Event).filter(Event.id == reg.event_id).first() if reg else None
     org = db.query(OrganizerProfile).filter(OrganizerProfile.user_id == user.id).first()
-    if not org:
-        raise HTTPException(status_code=403, detail="Organizer profile required")
-    
-    event = Event(
-        organizer_id=org.id,
-        category_id=event_data.get("category_id"),
-        title=event_data.get("title"),
-        slug=event_data.get("title", "").lower().replace(" ", "-") + "-" + str(uuid.uuid4().hex[:8]),
-        short_description=event_data.get("short_description"),
-        full_description=event_data.get("full_description"),
-        venue=event_data.get("venue"),
-        address=event_data.get("address"),
-        city=event_data.get("city"),
-        start_date=event_data.get("start_date"),
-        end_date=event_data.get("end_date"),
-        max_capacity=event_data.get("max_capacity", 100),
-        status=event_data.get("status", "DRAFT"),
-        is_featured=event_data.get("is_featured", False),
-        price_min=event_data.get("price_min", 0.0),
-    )
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return {"success": True, "message": "Event created", "data": {"id": event.id}}
+    if not org or not ev or ev.organizer_id != org.id:
+        raise HTTPException(status_code=403, detail={"valid": False, "error": "WRONG_EVENT",
+                                                     "message": "You are not the organizer of this event."})
+    if str(getattr(reg.status, "value", reg.status)) != "CONFIRMED" or \
+       str(getattr(reg.payment_status, "value", reg.payment_status)) != "PAID":
+        raise HTTPException(status_code=400, detail={"valid": False, "error": "NOT_PAID",
+                                                     "message": "Ticket is not paid/confirmed."})
+    tstatus = str(getattr(ticket.status, "value", ticket.status))
+    if tstatus == "USED":
+        raise HTTPException(status_code=400, detail={"valid": False, "error": "ALREADY_USED",
+                                                     "message": "TICKET ALREADY USED"})
+    if tstatus != "VALID":
+        raise HTTPException(status_code=400, detail={"valid": False, "error": "INVALID_TICKET",
+                                                     "message": "Ticket cannot be used."})
+    result = check_in_ticket(ticket.qr_token, user.id, db)
+    if result["valid"]:
+        attendee = db.query(UserModel).filter(UserModel.id == reg.user_id).first()
+        return {"success": True, "message": "ATTENDANCE CONFIRMED",
+                "data": {**result["ticket"], "attendee": attendee.username if attendee else "-",
+                         "event": ev.title, "valid": True}}
+    raise HTTPException(status_code=400, detail={"valid": False, "error": result["error"], "message": result["message"]})
+
+
+# ---------- admin (canonical home: admin_router; kept here only as redirect-safe stubs) ----------
+# NOTE: /admin/stats and /admin/events live in admin_router (registered after
+# this router would shadow them, so they are intentionally NOT defined here).

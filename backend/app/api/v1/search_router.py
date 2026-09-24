@@ -1,79 +1,75 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+"""Search — Phase 3 (lifecycle-aware, never returns ended events)."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from typing import List, Optional
+
 from app.database import get_db
-from app.models.event import Event, EventCategory
-from app.models.ticket import Registration, TicketType, Ticket
-from app.core.security import verify_token
-from app.core.config import settings
-from sqlalchemy import func, desc
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.models.event import Event
+from app.services.lifecycle import serialize_event
 
 api_router = APIRouter(prefix="/search", tags=["Search"])
 
 
-def get_current_user(token: str = Depends(lambda: None), db: Session = Depends(get_db)):
-    if not token:
-        return None
-    from app.core.security import verify_token as vt
-    payload = vt(token, "access")
-    if not payload:
-        return None
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-    return db.query(UserModel).filter(UserModel.id == int(user_id)).first()
-
-
-from app.models.user import User as UserModel
-
-
 @api_router.get("/", response_model=dict)
 def search_events(
-    q: str = Query(..., min_length=1),
+    q: Optional[str] = Query(default=None),
+    category: Optional[str] = None,
+    city: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
     page: int = 1,
     per_page: int = 20,
     db: Session = Depends(get_db),
 ):
-    search = f"%{q}%"
-    
-    events = db.query(Event).filter(
-        Event.title.ilike(search) |
-        Event.short_description.ilike(search) |
-        Event.city.ilike(search) |
-        Event.venue.ilike(search)
-    ).all()
-    
-    result_items = []
-    for ev in events:
-        cat = db.query(EventCategory).filter(EventCategory.id == ev.category_id).first()
-        org = db.query(db.query(UserModel).join(Event).filter(Event.id == ev.id).first())
-        from app.models.other import OrganizerProfile
-        organizer = db.query(OrganizerProfile).filter(OrganizerProfile.id == ev.organizer_id).first()
-        reg_count = db.query(func.count(Registration.id)).filter(Registration.event_id == ev.id, Registration.status == "CONFIRMED").scalar() or 0
-        result_items.append({
-            "id": ev.id,
-            "title": ev.title,
-            "slug": ev.slug,
-            "short_description": ev.short_description,
-            "cover_image_url": ev.cover_image_url,
-            "city": ev.city,
-            "venue": ev.venue,
-            "category_name": cat.name if cat else None,
-            "organizer_name": organizer.organization_name if organizer else None,
-            "start_date": ev.start_date,
-            "price_min": ev.price_min,
-            "status": ev.status,
-            "total_registrations": reg_count,
-            "available_capacity": ev.max_capacity - reg_count,
-        })
-    
+    from datetime import timedelta
+
+    from app.models.event import EventCategory
+    from app.services.lifecycle import PUBLIC_STATUSES
+
+    q = (q or "").strip()
+    if not q and not category and not city and not date_from and not date_to:
+        return {"success": True, "items": [], "total": 0, "page": page,
+                "per_page": per_page, "message": "Type a keyword or set a filter"}
+    query = db.query(Event).filter(Event.status.in_(list(PUBLIC_STATUSES)))
+    # hide ended (same predicate as discovery)
+    now = datetime.utcnow()
+    query = query.filter(
+        ~or_(
+            (Event.end_date.isnot(None)) & (Event.end_date <= now),
+            (Event.end_date.is_(None)) & (Event.start_date <= now - timedelta(hours=4)),
+        )
+    )
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Event.title.ilike(like),
+                Event.short_description.ilike(like),
+                Event.city.ilike(like),
+                Event.venue.ilike(like),
+            )
+        )
+    if category:
+        query = query.join(EventCategory, EventCategory.id == Event.category_id).filter(
+            or_(EventCategory.name.ilike(f"%{category}%"), EventCategory.slug == category.lower())
+        )
+    if city:
+        query = query.filter(Event.city.ilike(f"%{city}%"))
+    if date_from:
+        query = query.filter(or_(Event.end_date >= date_from, Event.start_date >= date_from))
+    if date_to:
+        query = query.filter(Event.start_date <= date_to)
+
+    total = query.count()
+    events = query.order_by(Event.start_date.asc()).offset((page - 1) * per_page).limit(per_page).all()
     return {
         "success": True,
-        "items": result_items,
-        "total": len(result_items),
-        "page": page,
-        "per_page": per_page,
-        "message": "Search results"
+        "items": [serialize_event(ev, db) for ev in events],
+        "total": total, "page": page, "per_page": per_page,
+        "message": "Search results",
     }

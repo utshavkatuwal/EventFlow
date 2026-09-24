@@ -6,6 +6,14 @@ from app.models.organizer import OrganizerProfile
 from app.models.event_image import EventImage
 from app.models.ticket import TicketType, Registration, Ticket, TicketScan
 from app.models.other import EventReview, Favorite, Notification, Report, AuditLog
+from app.models.finance import (
+    Payment,
+    Wallet,
+    WalletTransaction,
+    WithdrawalRequest,
+    PlatformSetting,
+)
+from app.models.verification import OrganizerApplication, OrganizerDocument
 
 # Ensure all models are imported for Base.metadata
 __all__ = [
@@ -16,4 +24,6 @@ __all__ = [
     "EventImage",
     "TicketType", "Registration", "Ticket", "TicketScan",
     "EventReview", "Favorite", "Notification", "Report", "AuditLog",
+    "Payment", "Wallet", "WalletTransaction", "WithdrawalRequest", "PlatformSetting",
+    "OrganizerApplication", "OrganizerDocument",
 ]

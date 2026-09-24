@@ -1,9 +1,11 @@
+from datetime import datetime
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models.event import Event
 from app.models.ticket import Registration, Ticket
-from app.models.other import EventReview, Notification
+from app.models.other import EventReview, Notification, Report
 from app.models.user import User
 from app.models.organizer import OrganizerProfile
 

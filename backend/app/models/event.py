@@ -25,6 +25,7 @@ class Event(Base):
     short_description = Column(String(500), nullable=True)
     full_description = Column(Text, nullable=True)
     cover_image_url = Column(String(500), nullable=True)
+    video_url = Column(String(500), nullable=True)
     venue = Column(String(500), nullable=True)
     address = Column(String(500), nullable=True)
     city = Column(String(100), nullable=True)

@@ -17,5 +17,9 @@ class OrganizerProfile(Base):
     city = Column(String(100), nullable=True)
     country = Column(String(100), default="Nepal", nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    # Phase 1 verification workflow: UNDER_REVIEW | APPROVED | REJECTED
+    verification_status = Column(String(20), nullable=False, default="UNDER_REVIEW", server_default="UNDER_REVIEW", index=True)
+    verification_info = Column(Text, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

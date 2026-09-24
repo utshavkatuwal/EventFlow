@@ -13,6 +13,11 @@ from app.api.v1.organizers_router import api_router as organizers_router
 from app.api.v1.users_router import api_router as users_router
 from app.api.v1.user_profile_router import api_router as user_profile_router
 from app.api.v1.organizer_profile_router import api_router as organizer_profile_router
+from app.api.v1.organizer_applications_router import api_router as organizer_applications_router
+from app.api.v1.registrations_router import api_router as registrations_router
+from app.api.v1.payments_router import api_router as payments_router
+from app.api.v1.organizer_ops_router import api_router as organizer_ops_router
+from app.api.v1.withdrawals_router import api_router as withdrawals_router
 
 api_router = APIRouter()
 
@@ -30,3 +35,8 @@ api_router.include_router(admin_router)
 api_router.include_router(organizers_router)
 api_router.include_router(users_router)
 api_router.include_router(organizer_profile_router)
+api_router.include_router(organizer_applications_router)
+api_router.include_router(registrations_router)
+api_router.include_router(payments_router)
+api_router.include_router(organizer_ops_router)
+api_router.include_router(withdrawals_router)

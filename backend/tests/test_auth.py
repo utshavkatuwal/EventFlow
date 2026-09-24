@@ -10,16 +10,20 @@ def client():
 
 class TestAuth:
     def test_register_returns_user_id(self, client):
+        import uuid
+        uid = uuid.uuid4().hex[:8]
         r = client.post("/api/v1/auth/register", json={
-            "email": f"test_{id}_a@test.com",
-            "username": f"test_a_{id}",
+            "email": f"test_{uid}_a@test.com",
+            "username": f"test_a_{uid}",
             "password": "Test123456",
         })
         assert r.status_code == 200
         assert r.json()["success"] is True
 
     def test_login_returns_tokens(self, client):
-        email = f"login_{id}_b@test.com"
+        import uuid
+        uid = uuid.uuid4().hex[:8]
+        email = f"login_{uid}_b@test.com"
         client.post("/api/v1/auth/register", json={
             "email": email, "username": email, "password": "Test123456",
         })
@@ -36,7 +40,7 @@ class TestAuth:
         assert r.status_code == 401
 
     def test_protected_route_requires_auth(self, client):
-        r = client.get("/api/v1/users/me")
+        r = client.get("/api/v1/auth/me")
         assert r.status_code == 401
 
 
