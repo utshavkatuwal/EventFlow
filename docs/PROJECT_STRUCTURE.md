@@ -13,8 +13,10 @@ EventFlow/
 │   │   │   ├── Loading.jsx
 │   │   │   ├── ProtectedRoute.jsx
 │   │   │   ├── RequireAuth.jsx
-│   │   │   └── RoleGuard.jsx
-│   │   ├── pages/                 # Page components
+│   │   │   ├── RoleGuard.jsx
+│   │   │   ├── RoleHome.jsx
+│   │   │   └── ... (27 total: Avatar, Badge, Modal, Table, ...)
+│   │   ├── pages/                 # Page components (35 total)
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── EventsPage.jsx
 │   │   │   ├── EventDetailPage.jsx
@@ -23,6 +25,8 @@ EventFlow/
 │   │   │   ├── UserDashboardPage.jsx
 │   │   │   ├── OrganizerDashboardPage.jsx
 │   │   │   ├── AdminDashboardPage.jsx
+│   │   │   ├── AdminWithdrawalsPage.jsx
+│   │   │   ├── PaymentCallbackPage.jsx
 │   │   │   ├── TicketPage.jsx
 │   │   │   ├── CheckInPage.jsx
 │   │   │   ├── ProfilePage.jsx
@@ -30,7 +34,12 @@ EventFlow/
 │   │   ├── layouts/               # Page layouts
 │   │   ├── hooks/                 # Custom React hooks
 │   │   ├── services/              # API service layer
-│   │   │   └── api.js
+│   │   │   ├── api.js
+│   │   │   └── saved.js
+│   │   ├── utils/
+│   │   │   ├── roles.js
+│   │   │   ├── images.js
+│   │   │   └── ...
 │   │   ├── context/               # React Context providers
 │   │   │   ├── AuthContext.jsx
 │   │   │   ├── ApiContext.jsx
@@ -44,25 +53,33 @@ EventFlow/
 │   │   └── main.jsx              # Entry point
 │   ├── public/
 │   │   └── images/
-│   ├── tests/                     # Frontend tests
+│   ├── tests/                     # Frontend tests (vitest)
+│   ├── Dockerfile                 # Multi-stage build → nginx
+│   ├── nginx.conf                 # SPA fallback + /api/ proxy to backend
 │   ├── package.json
 │   └── vite.config.js
 │
 ├── backend/                       # FastAPI backend
+│   ├── Dockerfile                 # python:3.11-slim + uvicorn
+│   ├── .dockerignore
+│   ├── alembic.ini
 │   ├── app/
-│   │   ├── main.py               # Application entry point
+│   │   ├── main.py               # Lifespan startup, absolute upload mounts
 │   │   ├── core/
-│   │   │   ├── config.py         # Settings
+│   │   │   ├── config.py         # Settings (env-driven, DEBUG=False default)
 │   │   │   └── security.py       # Auth utilities
 │   │   ├── config/               # Configuration modules
 │   │   ├── database/
-│   │   │   └── __init__.py       # DB connection, session, models base
+│   │   │   ├── __init__.py       # Engine/session + ensure_phase1_schema backfill
+│   │   │   └── models.py         # Re-exports all models for Base.metadata
 │   │   ├── models/               # SQLAlchemy ORM models
 │   │   │   ├── user.py
 │   │   │   ├── event.py
 │   │   │   ├── organizer.py
 │   │   │   ├── event_image.py
 │   │   │   ├── ticket.py
+│   │   │   ├── finance.py        # payments, wallets, withdrawals, platform_settings
+│   │   │   ├── verification.py   # organizer_applications, organizer_documents
 │   │   │   └── other.py
 │   │   ├── schemas/              # Pydantic validation
 │   │   │   └── __init__.py
@@ -70,37 +87,51 @@ EventFlow/
 │   │   │   └── v1/               # API version 1
 │   │   │       ├── router.py     # Main router
 │   │   │       ├── events_router.py
+│   │   │       ├── events_create_router.py
 │   │   │       ├── categories_router.py
 │   │   │       ├── user_router.py
+│   │   │       ├── users_router.py
 │   │   │       ├── tickets_router.py
+│   │   │       ├── registrations_router.py
 │   │   │       ├── reviews_router.py
 │   │   │       ├── notifications_router.py
 │   │   │       ├── search_router.py
 │   │   │       ├── admin_router.py
 │   │   │       ├── organizers_router.py
-│   │   │       └── users_router.py
+│   │   │       ├── organizer_ops_router.py
+│   │   │       ├── organizer_profile_router.py
+│   │   │       ├── organizer_applications_router.py
+│   │   │       ├── payments_router.py
+│   │   │       ├── withdrawals_router.py
+│   │   │       └── user_profile_router.py
 │   │   ├── services/             # Business logic layer
 │   │   │   ├── auth_service.py
 │   │   │   ├── event_service.py
 │   │   │   ├── analytics_service.py
+│   │   │   ├── booking.py
+│   │   │   ├── lifecycle.py
+│   │   │   ├── wallet.py
 │   │   │   ├── public_service.py
 │   │   │   ├── file_service.py
-│   │   │   └── file_utils.py
+│   │   │   ├── file_utils.py
+│   │   │   └── payments/         # esewa.py, khalti.py, base.py
 │   │   ├── repositories/         # Data access layer
 │   │   ├── auth/
 │   │   │   └── dependencies.py
 │   │   └── utils/
 │   ├── scripts/
 │   │   └── seed.py               # Database seeding
+│   ├── tests/                    # pytest (conftest isolates test_eventflow.db)
 │   ├── docs/
 │   ├── requirements.txt
-│   └── package.json
+│   └── package.json              # npm-style shortcuts (dev/seed/test)
 │
 ├── database/                      # Database schema & seeds
 │   ├── migrations/               # Alembic migrations
-│   │   ├── env.py
+│   │   ├── env.py                # Overrides URL from settings.DATABASE_URL
 │   │   └── versions/
-│   │       └── 000000000000_initial.py
+│   │       ├── 000000000000_initial.py
+│   │       └── 20260924_phase1_finance_verification.py
 │   ├── seeds/
 │   └── README.md
 │

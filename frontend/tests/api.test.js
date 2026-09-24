@@ -1,6 +1,5 @@
-import pytest
-
-
-def test_placeholder():
-    """Placeholder test to ensure pytest works"""
-    assert True
+describe('API service', () => {
+  test('placeholder passes', () => {
+    expect(true).toBe(true);
+  });
+});

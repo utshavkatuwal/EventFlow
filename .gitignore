@@ -38,6 +38,11 @@ Thumbs.db
 build/
 coverage/
 *.log
+server.log
+
+# Test / cache
+.pytest_cache/
+*.bak
 
 # Uploads
 uploads/
@@ -52,4 +57,4 @@ docker-compose.override.yml
 
 # Misc
 !.env.example
-sparkle_agent.py
+sparkle_*.py
